@@ -8,6 +8,7 @@ enum Palette {
 
 final class KeyCap: UIView {
     let label = UILabel()
+    let icon = UIImageView()
     var isSpecial = false { didSet { refreshColor() } }
     var isDown = false { didSet { refreshColor() } }
 
@@ -24,6 +25,9 @@ final class KeyCap: UIView {
         label.adjustsFontSizeToFitWidth = true
         label.minimumScaleFactor = 0.5
         addSubview(label)
+        icon.contentMode = .scaleAspectFit
+        icon.isHidden = true
+        addSubview(icon)
         refreshColor()
     }
 
@@ -32,6 +36,8 @@ final class KeyCap: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         label.frame = bounds.insetBy(dx: 2, dy: 0)
+        let s = bounds.height * 0.72
+        icon.frame = CGRect(x: bounds.midX - s / 2, y: bounds.midY - s / 2, width: s, height: s)
     }
 
     func refreshColor() {
@@ -98,8 +104,6 @@ final class KeyboardView: UIView {
         rebuild()
     }
 
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
     private func rows() -> [[Spec]] {
         func letters(_ s: String) -> [Spec] { s.map { Spec(id: String($0), weight: 1, fill: false) } }
         var bottom: [Spec] = [Spec(id: "MODE", weight: 1.3, fill: false)]
@@ -143,7 +147,7 @@ final class KeyboardView: UIView {
         switch id {
         case "SHIFT": return "⇧"
         case "BACK": return "⌫"
-        case "SPACE": return "● 핑거에러"
+        case "SPACE": return ""
         case "RETURN": return "⏎"
         case "GLOBE": return "🌐"
         case "MODE": return page == .hangul ? "123" : "가"
@@ -159,8 +163,9 @@ final class KeyboardView: UIView {
             if k.id == "SHIFT" { k.cap.isSpecial = !shift }
             // 핑거에러 표시: 스페이스바에 분홍 로고
             if k.id == "SPACE" {
-                k.cap.label.textColor = UIColor(red: 0.90, green: 0.24, blue: 0.48, alpha: 1)
-                k.cap.label.font = .systemFont(ofSize: 15, weight: .semibold)
+                // 스페이스바에 엄지 로고
+                k.cap.icon.image = UIImage(named: "space_logo", in: Bundle(for: KeyCap.self), compatibleWith: nil)
+                k.cap.icon.isHidden = false
             }
         }
     }
