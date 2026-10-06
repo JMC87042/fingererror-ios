@@ -104,6 +104,8 @@ final class KeyboardView: UIView {
         rebuild()
     }
 
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
     private func rows() -> [[Spec]] {
         func letters(_ s: String) -> [Spec] { s.map { Spec(id: String($0), weight: 1, fill: false) } }
         var bottom: [Spec] = [Spec(id: "MODE", weight: 1.3, fill: false)]
