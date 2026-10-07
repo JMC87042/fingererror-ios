@@ -13,7 +13,10 @@ targets:
   FingerError:
     type: application
     platform: iOS
-    sources: [App]
+    sources:
+      - path: App
+        excludes: ["*.entitlements"]
+      - Shared
     info:
       path: App/Info.plist
       properties:
@@ -31,7 +34,10 @@ targets:
   FingerErrorKeyboard:
     type: app-extension
     platform: iOS
-    sources: [Keyboard]
+    sources:
+      - path: Keyboard
+        excludes: ["*.entitlements"]
+      - Shared
     info:
       path: Keyboard/Info.plist
       properties:

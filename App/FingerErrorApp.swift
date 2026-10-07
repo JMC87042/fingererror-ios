@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct FingerErrorApp: App {
+    init() { ThemeFont.register() }
     var body: some Scene {
         WindowGroup { ContentView() }
     }
@@ -9,6 +10,7 @@ struct FingerErrorApp: App {
 
 struct ContentView: View {
     @State private var text = ""
+    @State private var themeId = ThemeStore.currentId()
 
     var body: some View {
         NavigationStack {
@@ -22,6 +24,38 @@ struct ContentView: View {
                             UIApplication.shared.open(url)
                         }
                     }
+                }
+                Section {
+                    ForEach(KBTheme.all, id: \.id) { t in
+                        Button {
+                            ThemeStore.save(t.id)
+                            themeId = t.id
+                        } label: {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text(t.name).font(.custom(ThemeFont.name, size: 19)).foregroundStyle(.primary)
+                                    Spacer()
+                                    if themeId == t.id {
+                                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                                    }
+                                }
+                                Image("theme_\(t.id)")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(themeId == t.id ? Color.green : Color.clear, lineWidth: 3)
+                                    )
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } header: {
+                    Text("키보드 테마").font(.custom(ThemeFont.name, size: 15))
+                } footer: {
+                    Text("색만 바뀌고 학습 기록은 그대로예요. 기본 테마는 다크모드를 따라가요. 키보드를 쓰다가 스페이스바의 팻핑이를 꾹 누르면 바로 바꿀 수 있어요.")
                 }
                 Section("여기서 바로 연습") {
                     TextField("핑거에러로 쳐보세요", text: $text, axis: .vertical)

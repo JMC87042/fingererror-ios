@@ -78,9 +78,15 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         view.window?.gestureRecognizers?.forEach { $0.delaysTouchesBegan = false }
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        kv.applyTheme(ThemeStore.current())   // 앱에서 고른 테마
+    }
+
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         stopRepeat()
+        kv.closeMenu()
         learner.saveNow()
     }
 
@@ -88,13 +94,16 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     func keyPressed(_ id: String, at p: CGPoint, raw: String) {
         switch id {
-        case "SHIFT": kv.shift.toggle()
+        case "SHIFT":
+            kv.shift.toggle()
         case "BACK": backspace(); startRepeat()
-        case "SPACE": typeChar(" ")
+        case "SPACE": typeSpace()
         case "RETURN": typeChar("\n")
         case "MODE":
             kv.shift = false
             kv.page = kv.page == .hangul ? .number : .hangul
+        case "SYM":
+            kv.page = kv.page == .symbol ? .number : .symbol
         case "GLOBE": advanceToNextInputMode()
         default:
             if kv.page == .hangul && (Hangul.isConsonant(id) || Hangul.isVowel(id)) {
@@ -143,6 +152,22 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         pushHistory(TapMeta(id: id, fx: p.x, fy: p.y, ok: false))
         if raw != id { learner.data.fixes += 1 }
         learner.saveSoon()
+    }
+
+    /// 스페이스 두 번 빠르게 → ". " (아이폰 기본 키보드의 마침표 단축키)
+    private var lastSpaceAt = Date.distantPast
+    private func typeSpace() {
+        commitComposition()
+        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        if Date().timeIntervalSince(lastSpaceAt) < 0.6, before.hasSuffix(" "),
+           let prev = before.dropLast().last, !prev.isWhitespace, !".,?!".contains(prev) {
+            textDocumentProxy.deleteBackward()
+            typeChar(". ")
+            lastSpaceAt = .distantPast
+            return
+        }
+        typeChar(" ")
+        lastSpaceAt = Date()
     }
 
     private func typeChar(_ s: String) {
