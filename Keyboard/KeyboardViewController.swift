@@ -13,6 +13,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     private var tokens: [String] = []   // 조합 중인 자모
     private var shown = ""               // 화면에 넣어둔 조합 결과
+    private var lastEditAt = Date.distantPast
     private var history: [TapMeta?] = [] // 친 순서대로 (스택)
     private var delBuf: [TapMeta?] = []  // 지운 것들 (원래 순서)
     private var reIdx = 0
@@ -87,6 +88,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         super.viewWillDisappear(animated)
         stopRepeat()
         kv.closeMenu()
+        commitComposition()
         learner.saveNow()
     }
 
@@ -222,8 +224,10 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     // MARK: - 한글 조합
 
+    /// 조합 결과를 화면에 반영 (바뀐 글자만 지우고 다시 넣음, 밑줄·하이라이트 없음)
     private func applyTokens() {
         composing = true
+        lastEditAt = Date()
         let new = Hangul.assemble(tokens)
         let o = Array(shown), n = Array(new)
         var i = 0
@@ -246,8 +250,11 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     }
 
     private func checkExternalChange() {
-        guard !composing, !shown.isEmpty else { return }
+        // 방금 내가 글자를 바꾼 직후에는 앱이 화면 글자를 늦게 알려줄 수 있음.
+        // 그때 잘못 판단해서 조합을 끊으면 "ㅇㅏㄴ"처럼 갈라지므로 무시.
+        guard !composing, !shown.isEmpty, Date().timeIntervalSince(lastEditAt) > 0.35 else { return }
         if let before = textDocumentProxy.documentContextBeforeInput, !before.hasSuffix(shown) {
+            // 사용자가 커서를 옮겼거나 앱이 글을 비움(카톡 전송 등)
             commitComposition()
         }
     }
