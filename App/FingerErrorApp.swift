@@ -15,10 +15,24 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    NavigationLink {
+                        ReportView()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Text("📊").font(.title2)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("내 엄지 리포트").font(.custom(ThemeFont.name, size: 19))
+                                Text("고친 오타 · 자주 헷갈리는 키 · 받은 기념일").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
                 Section("키보드 켜는 법") {
                     Text("1. 설정 → 일반 → 키보드 → 키보드")
                     Text("2. 새로운 키보드 추가 → 핑거에러")
                     Text("3. 입력할 때 🌐 버튼으로 핑거에러로 바꾸기")
+                    Text("한/A 키: 한글↔영어 · 꾹 누르면 다른 키보드로")
                     Button("설정 열기") {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
                             UIApplication.shared.open(url)

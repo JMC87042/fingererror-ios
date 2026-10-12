@@ -4,6 +4,8 @@ final class KeyCap: UIView {
     /// 키 윗면 (글자·로고). KeyCap 자체 크기 = 누르는 판정 영역 → 테마가 바뀌어도 그대로
     let face = UIView()
     let label = UILabel()
+    /// 키 왼쪽 위 작은 글자 (한/A 키의 '한' 등)
+    let hint = UILabel()
     let icon = UIImageView()
     let gloss = UIView()
     /// 계절 스티커 (키 모서리에 살짝 걸침, 누르는 영역과 무관)
@@ -34,6 +36,9 @@ final class KeyCap: UIView {
         label.adjustsFontSizeToFitWidth = true
         label.minimumScaleFactor = 0.5
         face.addSubview(label)
+        hint.font = .systemFont(ofSize: 10)
+        hint.isHidden = true
+        face.addSubview(hint)
         icon.contentMode = .scaleAspectFit
         icon.isHidden = true
         face.addSubview(icon)
@@ -64,6 +69,7 @@ final class KeyCap: UIView {
         face.layer.cornerRadius = theme.radius
         layer.cornerRadius = theme.radius
         label.frame = face.bounds.insetBy(dx: 2, dy: 0)
+        hint.frame = CGRect(x: 5, y: 2, width: 20, height: 13)
         let s = face.bounds.height * iconScale
         icon.frame = CGRect(x: face.bounds.midX - s / 2, y: face.bounds.midY - s / 2, width: s, height: s)
         let fb = face.bounds
@@ -101,6 +107,7 @@ final class KeyCap: UIView {
         face.layer.shadowOffset = CGSize(width: 0, height: t.shadowColor == nil ? 1 : 2.5)
         gloss.isHidden = !t.gloss || isDown
         label.textColor = isAccent ? UIColor(white: 1, alpha: 0.98) : (isSpecial ? t.specialText : t.text)
+        hint.textColor = label.textColor.withAlphaComponent(0.6)
     }
 }
 
@@ -111,7 +118,7 @@ protocol KeyboardViewDelegate: AnyObject {
 }
 
 final class KeyboardView: UIView {
-    enum Page { case hangul, number, symbol }
+    enum Page { case hangul, english, number, symbol }
 
     struct Key {
         let id: String
@@ -147,6 +154,9 @@ final class KeyboardView: UIView {
         refreshLabels()
     }
     var shift = false { didSet { refreshLabels() } }
+    var capsLock = false { didSet { refreshLabels() } }
+    /// 숫자 화면에서 돌아갈 글자 화면 (한글/영어)
+    var letterPage: Page = .hangul
     var showGlobe = true { didSet { if oldValue != showGlobe { rebuild() } } }
 
     private(set) var keys: [Key] = []
@@ -167,7 +177,7 @@ final class KeyboardView: UIView {
     private let side: CGFloat = 3
     private let topPad: CGFloat = 8
     private let bottomPad: CGFloat = 4
-    private static let specials: Set<String> = ["SHIFT", "BACK", "MODE", "GLOBE", "RETURN", "SYM"]
+    private static let specials: Set<String> = ["SHIFT", "BACK", "MODE", "GLOBE", "RETURN", "SYM", "LANG"]
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -188,7 +198,8 @@ final class KeyboardView: UIView {
         // 아이폰 기본 한국어 키보드와 같은 배열 (글자 키 위치·크기는 그대로)
         var bottom: [Spec] = [Spec(id: "MODE", weight: 1.3, fill: false)]
         if showGlobe { bottom.append(Spec(id: "GLOBE", weight: 1.3, fill: false)) }
-        bottom += [Spec(id: "SPACE", weight: 1, fill: true),
+        bottom += [Spec(id: "LANG", weight: 1.3, fill: false),
+                   Spec(id: "SPACE", weight: 1, fill: true),
                    Spec(id: "RETURN", weight: 2.4, fill: false)]
         func wide(_ s: String) -> [Spec] { s.map { Spec(id: String($0), weight: 1.4, fill: false) } }
         let punct = [Spec(id: "SYM", weight: 1, fill: true)] + wide(".,?!'") + [Spec(id: "BACK", weight: 1, fill: true)]
@@ -197,6 +208,12 @@ final class KeyboardView: UIView {
             return [letters("ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ"),
                     letters("ㅁㄴㅇㄹㅎㅗㅓㅏㅣ"),
                     [Spec(id: "SHIFT", weight: 1, fill: true)] + letters("ㅋㅌㅊㅍㅠㅜㅡ") + [Spec(id: "BACK", weight: 1, fill: true)],
+                    bottom]
+        case .english:
+            // 한글 자판과 키 위치·크기가 완전히 같음 (ㅂ자리=q, ㅁ자리=a, ㅋ자리=z)
+            return [letters("qwertyuiop"),
+                    letters("asdfghjkl"),
+                    [Spec(id: "SHIFT", weight: 1, fill: true)] + letters("zxcvbnm") + [Spec(id: "BACK", weight: 1, fill: true)],
                     bottom]
         case .number:
             return [letters("1234567890"),
@@ -222,7 +239,8 @@ final class KeyboardView: UIView {
                 cap.isSpecial = KeyboardView.specials.contains(s.id)
                 cap.theme = theme
                 cap.isAccent = s.id == "RETURN" && theme.accent != nil
-                let letter = page == .hangul && (Hangul.isConsonant(s.id) || Hangul.isVowel(s.id))
+                let letter = (page == .hangul && (Hangul.isConsonant(s.id) || Hangul.isVowel(s.id)))
+                    || (page == .english && KeyboardView.en2ko[s.id] != nil)
                 addSubview(cap)
                 keys.append(Key(id: s.id, isLetter: letter, row: ri, cap: cap))
             }
@@ -233,16 +251,31 @@ final class KeyboardView: UIView {
 
     private func label(for id: String) -> String {
         switch id {
-        case "SHIFT": return "⇧"
+        case "SHIFT": return capsLock ? "⇪" : "⇧"
+        case "LANG": return page == .english || (page != .hangul && letterPage == .english) ? "한" : "A"
         case "BACK": return "⌫"
         case "SPACE": return ""
         case "RETURN": return "⏎"
         case "GLOBE": return "🌐"
-        case "MODE": return page == .hangul ? "123" : "가"
+        case "MODE":
+            if page == .hangul || page == .english { return "123" }
+            return letterPage == .english ? "ABC" : "가"
         case "SYM": return page == .symbol ? "123" : "#+="
-        default: return shift ? (Hangul.shiftMap[id] ?? id) : id
+        default:
+            if page == .english { return (shift || capsLock) ? id.uppercased() : id }
+            return shift ? (Hangul.shiftMap[id] ?? id) : id
         }
     }
+
+    /// 영어 키 → 같은 자리의 한글 키 (엄지 쏠림 학습을 한글·영어가 함께 씀)
+    static let en2ko: [String: String] = {
+        var m: [String: String] = [:]
+        for (e, k) in zip(["qwertyuiop", "asdfghjkl", "zxcvbnm"], ["ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ", "ㅁㄴㅇㄹㅎㅗㅓㅏㅣ", "ㅋㅌㅊㅍㅠㅜㅡ"]) {
+            for (a, b) in zip(e, k) { m[String(a)] = String(b) }
+        }
+        return m
+    }()
+    static func posId(_ id: String) -> String { en2ko[id] ?? id }
 
     /// 작은 잎이 앉는 자리: 키 → (가로 비율, 세로 비율, 그림 번호). 글자는 안 가림
     static let sprinkleSpots: [String: (CGFloat, CGFloat, Int)] = [
@@ -255,7 +288,12 @@ final class KeyboardView: UIView {
             k.cap.label.text = label(for: k.id)
             let big = k.id.count == 1 || k.id == "SHIFT" || k.id == "BACK" || k.id == "RETURN"
             k.cap.label.font = .systemFont(ofSize: big ? 22 : 16)
-            if k.id == "SHIFT" { k.cap.isSpecial = !shift }
+            if k.id == "SHIFT" { k.cap.isSpecial = !(shift || capsLock) }
+            if k.id == "LANG" {
+                k.cap.hint.text = k.cap.label.text == "A" ? "한" : "A"
+                k.cap.hint.isHidden = false
+                k.cap.label.font = .systemFont(ofSize: 20)
+            }
             // 핑거에러 표시: 스페이스바에 분홍 로고
             if k.id == "RETURN" {
                 if let n = theme.enterIcon, let img = KeyCap.image(n) {
@@ -279,9 +317,9 @@ final class KeyboardView: UIView {
             }
             if k.id == "SPACE" {
                 // 스페이스바에 팻핑이 (테마에 따라 밤 모자 등)
-                let custom = theme.spaceIcon.flatMap { KeyCap.image($0) }
+                let custom = KeyCap.image("pat_" + theme.id)
                 k.cap.icon.image = custom ?? KeyCap.image("space_logo")
-                k.cap.iconScale = custom == nil ? 0.72 : 0.86
+                k.cap.iconScale = custom == nil ? 0.72 : 0.84
                 k.cap.icon.isHidden = false
             }
             if let pre = theme.sprinkle, let sp = KeyboardView.sprinkleSpots[k.id], let img = KeyCap.image(pre + String(sp.2)) {
@@ -344,13 +382,13 @@ final class KeyboardView: UIView {
 
         guard let rawI = pool.min(by: { dist($0, 0, 0, 1) < dist($1, 0, 0, 1) }) else { return nil }
         let raw = keys[rawI].id
-        guard page == .hangul, !letterIdx.isEmpty, let lr = learner, lr.data.fixOn else { return (rawI, raw) }
+        guard page == .hangul || page == .english, !letterIdx.isEmpty, let lr = learner, lr.data.fixOn else { return (rawI, raw) }
 
         // 내 엄지 쏠림 + 흔들림 방향으로 판정
         let t = lr.thumb()
         let sq = CGFloat(sqrt(t.k))
         let scored = letterIdx.map { i -> (Int, CGFloat) in
-            let o = lr.data.off[keys[i].id] ?? KeyOffset()
+            let o = lr.data.off[KeyboardView.posId(keys[i].id)] ?? KeyOffset()
             return (i, dist(i, CGFloat(o.dx), CGFloat(o.dy), sq))
         }.sorted { $0.1 < $1.1 }
         var chosen = scored[0].0
@@ -371,6 +409,27 @@ final class KeyboardView: UIView {
     private var holdStart: CGPoint = .zero
     private var menuTouch: ObjectIdentifier?
     var menuOpen: Bool { menu.superview != nil }
+
+    // 한/A 꾹 누르기 → 다른 키보드(기본 키보드 등)로
+    private var langTouch: ObjectIdentifier?
+
+    @objc private func langHeld() {
+        guard let oid = langTouch, let pd = pressed.removeValue(forKey: oid) else { langTouch = nil; return }
+        langTouch = nil
+        if pd.index < keys.count { keys[pd.index].cap.isDown = false }
+        delegate?.keyPressed("LANG_HOLD", at: pd.point, raw: pd.raw)
+    }
+
+    private func cancelLang() {
+        NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(langHeld), object: nil)
+        langTouch = nil
+    }
+
+    // 기념일 말풍선
+    private let toast = ToastView()
+    func showToast(_ title: String, _ sub: String) {
+        toast.show(in: self, theme: theme, title: title, sub: sub)
+    }
 
     private func startHold(_ t: UITouch, at p: CGPoint) {
         NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(openMenuFromHold), object: nil)
@@ -428,6 +487,11 @@ final class KeyboardView: UIView {
             pressed[ObjectIdentifier(t)] = Pending(index: i, id: id, point: norm, raw: r.1, immediate: immediate)
             keys[i].cap.isDown = true
             if id == "SPACE" { startHold(t, at: p) }
+            if id == "LANG" {
+                cancelLang()
+                langTouch = ObjectIdentifier(t)
+                perform(#selector(langHeld), with: nil, afterDelay: 0.5)
+            }
             if immediate { delegate?.keyPressed(id, at: norm, raw: r.1) }
         }
     }
@@ -454,6 +518,7 @@ final class KeyboardView: UIView {
                 continue
             }
             if oid == holdTouch { cancelHold() }
+            if oid == langTouch { cancelLang() }
             guard let pd = pressed.removeValue(forKey: oid) else { continue }
             if !pd.immediate { delegate?.keyPressed(pd.id, at: pd.point, raw: pd.raw) }
             if pd.index < keys.count { keys[pd.index].cap.isDown = false }

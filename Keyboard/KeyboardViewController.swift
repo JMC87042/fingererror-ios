@@ -48,7 +48,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         guard KeyboardViewController.endBase.contains(c) || (learned && adjacent(c, "ㅇ")) else { return }
         tokens[n - 2] = "ㅇ"
         lastAuto = (n - 2, c, p + c)
-        learner.data.fixes += 1
+        countFix(english: false)
     }
 
     override func viewDidLoad() {
@@ -82,6 +82,29 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         kv.applyTheme(ThemeStore.current())   // 앱에서 고른 테마
+        autoCap()
+        // 날짜 기념일 (만난 지 22·100일 …): 그날 키보드를 처음 열 때 한 번
+        if let d = learner.newDayMilestone() {
+            learner.saveSoon()
+            if !ThemeStore.bool("fe.toastOff") {
+                let t = Anniversary.dayText(d)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.kv.showToast(t.0, t.1) }
+            }
+        }
+    }
+
+    /// 오타 기념일 확인 (고친 개수가 22·100·200… 에 닿으면 말풍선)
+    private func checkCountMilestone() {
+        guard let m = learner.newCountMilestone() else { return }
+        learner.saveSoon()
+        if ThemeStore.bool("fe.toastOff") { return }
+        let t = Anniversary.countText(theme: kv.theme.id, n: m)
+        kv.showToast(t.0, t.1)
+    }
+
+    private func countFix(english: Bool) {
+        learner.countFix(english: english)
+        checkCountMilestone()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -97,19 +120,47 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     func keyPressed(_ id: String, at p: CGPoint, raw: String) {
         switch id {
         case "SHIFT":
-            kv.shift.toggle()
-        case "BACK": backspace(); startRepeat()
+            if kv.page == .english {
+                // 한 번: 다음 글자만 대문자 / 빠르게 두 번: 계속 대문자
+                if kv.capsLock { kv.capsLock = false; kv.shift = false }
+                else if kv.shift && Date().timeIntervalSince(lastShiftAt) < 0.35 { kv.capsLock = true }
+                else { kv.shift.toggle() }
+                lastShiftAt = Date()
+            } else {
+                kv.shift.toggle()
+            }
+        case "LANG":
+            commitComposition()
+            let toEnglish = !(kv.page == .english || (kv.page != .hangul && kv.letterPage == .english))
+            kv.shift = false
+            kv.capsLock = false
+            kv.letterPage = toEnglish ? .english : .hangul
+            kv.page = kv.letterPage
+            autoCap()
+        case "LANG_HOLD":
+            // 한/A 꾹: 다른 키보드(아이폰 기본 키보드 등)로 바꾸기
+            commitComposition()
+            advanceToNextInputMode()
+        case "BACK": backspace(); autoCap(); startRepeat()
         case "SPACE": typeSpace()
         case "RETURN": typeChar("\n")
         case "MODE":
             kv.shift = false
-            kv.page = kv.page == .hangul ? .number : .hangul
+            if kv.page == .hangul || kv.page == .english {
+                kv.letterPage = kv.page
+                kv.page = .number
+            } else {
+                kv.page = kv.letterPage
+                autoCap()
+            }
         case "SYM":
             kv.page = kv.page == .symbol ? .number : .symbol
         case "GLOBE": advanceToNextInputMode()
         default:
             if kv.page == .hangul && (Hangul.isConsonant(id) || Hangul.isVowel(id)) {
                 typeLetter(id, p, raw)
+            } else if kv.page == .english && KeyboardView.en2ko[id] != nil {
+                typeEnglish(id, p, raw)
             } else {
                 typeChar(id)
             }
@@ -120,8 +171,37 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         if id == "BACK" { stopRepeat() }
     }
 
-    private func typeLetter(_ id: String, _ p: CGPoint, _ raw: String) {
-        // 지우고 다시 친 경우: 같은 자리끼리 비교해서 배움
+    private var lastShiftAt = Date.distantPast
+
+    /// 영어: 문장 첫 글자는 자동 대문자
+    private func autoCap() {
+        guard kv.page == .english, !kv.capsLock else { return }
+        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        let t = before.trimmingCharacters(in: .whitespaces)
+        let start = before.isEmpty || before.hasSuffix("\n") || (before.hasSuffix(" ") && (t.hasSuffix(".") || t.hasSuffix("!") || t.hasSuffix("?")))
+        if start && !kv.shift { kv.shift = true }
+    }
+
+    /// 영어 한 글자 (조합 없이 바로 입력, 엄지 학습은 한글과 같은 자리로 공유)
+    private func typeEnglish(_ id: String, _ p: CGPoint, _ raw: String) {
+        retypeLearn(id)
+        confirmPrev()
+        commitComposition()
+        var ch = id
+        if kv.shift || kv.capsLock {
+            ch = id.uppercased()
+            if !kv.capsLock { kv.shift = false }
+        }
+        lastAuto = nil
+        textDocumentProxy.insertText(ch)
+        lastEditAt = Date()
+        pushHistory(TapMeta(id: id, fx: p.x, fy: p.y, ok: false))
+        if raw != id { countFix(english: true) }
+        learner.saveSoon()
+    }
+
+    /// 지우고 다시 친 경우: 같은 자리끼리 비교해서 배움 (한글·영어 공통)
+    private func retypeLearn(_ id: String) {
         if !delBuf.isEmpty && reIdx < delBuf.count && Date().timeIntervalSince(delT) < 10 {
             if let orig = delBuf[reIdx], orig.id != id, adjacent(orig.id, id), id == "ㅇ", isEndSlot() {
                 // 어미 자리 실수는 따로 저장 (라면·타요의 ㄹ·ㅌ은 건드리지 않게)
@@ -140,6 +220,10 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         } else if !delBuf.isEmpty {
             clearDel()
         }
+    }
+
+    private func typeLetter(_ id: String, _ p: CGPoint, _ raw: String) {
+        retypeLearn(id)
         confirmPrev()
 
         var ch = id
@@ -152,7 +236,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         if learner.data.fixOn { endCheck() }
         applyTokens()
         pushHistory(TapMeta(id: id, fx: p.x, fy: p.y, ok: false))
-        if raw != id { learner.data.fixes += 1 }
+        if raw != id { countFix(english: false) }
         learner.saveSoon()
     }
 
@@ -183,6 +267,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         textDocumentProxy.insertText(s)
         pushHistory(nil)
         learner.saveSoon()
+        autoCap()
     }
 
     private func backspace() {
@@ -281,7 +366,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         learnAt(m.id, m.fx, m.fy, 0.04)
         m.ok = true
         history[history.count - 1] = m
-        learner.data.taps += 1
+        learner.countTap(english: KeyboardView.en2ko[m.id] != nil)
     }
 
     private func clearDel() {
@@ -292,7 +377,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private func learnAt(_ id: String, _ fx: CGFloat, _ fy: CGFloat, _ rate: Double) {
         guard let f = kv.frameOf(id), f.width > 0, f.height > 0 else { return }
         let x = fx * kv.bounds.width, y = fy * kv.bounds.height
-        learner.learn(id, ox: Double((x - f.midX) / f.width), oy: Double((y - f.midY) / f.height), rate: rate)
+        learner.learn(KeyboardView.posId(id), ox: Double((x - f.midX) / f.width), oy: Double((y - f.midY) / f.height), rate: rate)
     }
 
     private func adjacent(_ a: String, _ b: String) -> Bool {

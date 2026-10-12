@@ -84,16 +84,14 @@ struct KBTheme {
                 text: c(196, 64, 52), specialText: .white,
                 accent: c(218, 52, 52), radius: 11, shadow: true,
                 bgImage: "bg_coral", enterIcon: "enter_chestnut", sticker: "sticker_chestnut",
-                gloss: true, shadowColor: c(200, 80, 60),
-                spaceIcon: "space_logo_chestnut", sprinkle: "sprinkle_maple_"),
+                gloss: true, shadowColor: c(200, 80, 60), sprinkle: "sprinkle_maple_"),
         KBTheme(id: "yellow", name: "가을 옐로우",
                 bg: c(252, 204, 80), key: c(255, 253, 244), special: c(246, 166, 40),
                 pressKey: c(255, 240, 200), pressSpecial: c(226, 146, 30),
                 text: c(170, 100, 20), specialText: .white,
                 accent: c(232, 92, 40), radius: 11, shadow: true,
                 bgImage: "bg_yellow", enterIcon: "enter_chestnut", sticker: "sticker_chestnut",
-                gloss: true, shadowColor: c(200, 140, 30),
-                spaceIcon: "space_logo_chestnut", sprinkle: "sprinkle_ginkgo_"),
+                gloss: true, shadowColor: c(200, 140, 30), sprinkle: "sprinkle_ginkgo_"),
         KBTheme(id: "winter", name: "겨울 눈사람",
                 bg: c(170, 200, 240), key: c(252, 254, 255), special: c(196, 218, 248),
                 pressKey: c(226, 238, 252), pressSpecial: c(176, 202, 240),
@@ -151,5 +149,36 @@ enum ThemeStore {
             d.set(id, forKey: "fe.theme")
             d.set(ts, forKey: "fe.themeTS")
         }
+    }
+
+    // MARK: - 앱과 키보드가 함께 보는 설정·리포트
+
+    static func bool(_ key: String) -> Bool {
+        var best = false, bestTs = -1.0
+        for d in suites() {
+            let ts = d.double(forKey: key + "TS")
+            if d.object(forKey: key) != nil, ts > bestTs { best = d.bool(forKey: key); bestTs = ts }
+        }
+        return best
+    }
+
+    static func setBool(_ key: String, _ v: Bool) {
+        let ts = Date().timeIntervalSince1970
+        for d in suites() { d.set(v, forKey: key); d.set(ts, forKey: key + "TS") }
+    }
+
+    static func saveReport(_ data: Data) {
+        let ts = Date().timeIntervalSince1970
+        for d in suites() { d.set(data, forKey: "fe.report"); d.set(ts, forKey: "fe.reportTS") }
+    }
+
+    static func loadReport() -> [String: Any]? {
+        var best: Data?, bestTs = -1.0
+        for d in suites() {
+            let ts = d.double(forKey: "fe.reportTS")
+            if let v = d.data(forKey: "fe.report"), ts > bestTs { best = v; bestTs = ts }
+        }
+        guard let b = best else { return nil }
+        return (try? JSONSerialization.jsonObject(with: b)) as? [String: Any]
     }
 }
