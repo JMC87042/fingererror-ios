@@ -265,6 +265,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         }
         commitComposition()
         textDocumentProxy.insertText(s)
+        lastEditAt = Date()
         pushHistory(nil)
         learner.saveSoon()
         autoCap()
@@ -293,8 +294,11 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             applyTokens()
             return
         }
-        // 조합 중이 아니면, 앞 글자를 자모로 풀어서 한 자모만 지움
-        if let before = textDocumentProxy.documentContextBeforeInput, let last = before.last,
+        // 조합 중이 아니면, 앞 글자를 자모로 풀어서 한 자모만 지움.
+        // 단, 방금 글자를 바꾼 직후나 ⌫를 꾹 누르는 중에는 앱이 알려주는 앞 글자가 아직 옛날 것일 수 있어서
+        // (그걸 믿고 풀면 지운 글자가 다시 살아나 겹침) 그때는 글자 하나를 통째로 지움
+        let fresh = Date().timeIntervalSince(lastEditAt) > 0.4 && repeatTimer == nil
+        if fresh, let before = textDocumentProxy.documentContextBeforeInput, let last = before.last,
            let jamo = Hangul.decompose(last), jamo.count > 1 {
             composing = true
             textDocumentProxy.deleteBackward()
@@ -304,6 +308,8 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             applyTokens()
         } else {
             textDocumentProxy.deleteBackward()
+            lastEditAt = Date()
+            if !fresh { history.removeAll(); clearDel() }   // 통째로 지웠으면 다시 치기 학습은 이번엔 쉼
         }
     }
 

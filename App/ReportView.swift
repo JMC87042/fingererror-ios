@@ -4,7 +4,7 @@ import SwiftUI
 struct ReportView: View {
     @State private var english = false
     @State private var toastOn = !ThemeStore.bool("fe.toastOff")
-    private let r = ThemeStore.loadReport()
+    @State private var r: [String: Any]? = ThemeStore.loadReport()
 
     private let koRows = ["ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ", "ㅁㄴㅇㄹㅎㅗㅓㅏㅣ", "ㅋㅌㅊㅍㅠㅜㅡ"]
     private let enRows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"]
@@ -84,6 +84,8 @@ struct ReportView: View {
             }
         }
         .navigationTitle("내 엄지 리포트")
+        .onAppear { r = ThemeStore.loadReport() }
+        .refreshable { r = ThemeStore.loadReport() }
     }
 
     private func header(_ s: String) -> some View { Text(s).font(.custom(ThemeFont.name, size: 15)) }

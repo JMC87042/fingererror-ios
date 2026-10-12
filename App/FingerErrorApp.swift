@@ -80,6 +80,9 @@ struct ContentView: View {
                         .font(.footnote)
                 }
             }
+            .safeAreaInset(edge: .bottom) {
+                Text("버전 2026.10.12 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
+            }
             .navigationTitle("핑거에러")
         }
     }
