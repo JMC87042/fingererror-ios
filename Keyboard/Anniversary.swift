@@ -34,6 +34,13 @@ enum Anniversary {
         return (fill(c.0), fill(c.1))
     }
 
+    static let reportSub = "리포트가 앱에 올라갔어요"
+
+    /// 100개마다 리포트 도착 알림
+    static func reportText(_ n: Int) -> (String, String) {
+        ("📊 오타 \(n)개 리포트 도착!", "핑거에러 앱에서 확인해 보세요")
+    }
+
     static func dayText(_ d: Int) -> (String, String) {
         (d == 365 ? "팻핑이와 만난 지 1년" : "팻핑이와 만난 지 \(d)일", "오늘도 네 엄지 편이야")
     }

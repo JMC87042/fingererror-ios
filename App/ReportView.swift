@@ -4,7 +4,13 @@ import SwiftUI
 struct ReportView: View {
     @State private var english = false
     @State private var toastOn = !ThemeStore.bool("fe.toastOff")
-    @State private var r: [String: Any]? = ThemeStore.loadReport()
+    @State private var r: [String: Any]? = ReportView.load()
+
+    /// 100개마다 올라온 리포트만 씀 (예전 방식 기록은 무시)
+    static func load() -> [String: Any]? {
+        guard let v = ThemeStore.loadReport(), v["at"] != nil else { return nil }
+        return v
+    }
 
     private let koRows = ["ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ", "ㅁㄴㅇㄹㅎㅗㅓㅏㅣ", "ㅋㅌㅊㅍㅠㅜㅡ"]
     private let enRows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"]
@@ -13,23 +19,26 @@ struct ReportView: View {
         Form {
             if r == nil {
                 Section {
-                    Text("아직 기록이 없어요").font(.custom(ThemeFont.name, size: 18))
-                    Text("핑거에러 키보드로 조금 더 써보면 보여요. 설치 방식에 따라 아이폰에서는 기록이 앱으로 안 넘어올 수도 있어요.")
+                    Text("첫 리포트를 기다리는 중이에요").font(.custom(ThemeFont.name, size: 18))
+                    Text("핑거에러가 오타를 100개 고칠 때마다 리포트가 여기에 올라와요. 올라오면 키보드에서 팻핑이가 알려줄게요.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             } else {
                 Section {
+                    let at = r?["at"] as? Int ?? 0
+                    Text("📊 오타 \(at)개 리포트 · \(r?["date"] as? String ?? "")").font(.custom(ThemeFont.name, size: 16))
+                    Text("다음 리포트는 오타 \(at + 100)개 때 올라와요").font(.footnote).foregroundStyle(.secondary)
                     Picker("", selection: $english) {
                         Text("한글").tag(false)
                         Text("영어").tag(true)
                     }.pickerStyle(.segmented)
                 }
-                Section(header: header("이번 주 고친 오타")) {
+                Section(header: header("리포트 직전 7일 동안 고친 오타")) {
                     let w = weekFixes()
                     HStack(alignment: .firstTextBaseline) {
                         Text("\(w.0)개").font(.custom(ThemeFont.name, size: 34))
                         Spacer()
-                        Text("지난주 \(w.1)개").foregroundStyle(.secondary)
+                        Text("그 전 7일 \(w.1)개").foregroundStyle(.secondary)
                     }
                     Text("전체 고친 오타 \(total("fixes"))개 · 전체 타수 \(total("taps"))")
                         .font(.footnote).foregroundStyle(.secondary)
@@ -84,8 +93,8 @@ struct ReportView: View {
             }
         }
         .navigationTitle("내 엄지 리포트")
-        .onAppear { r = ThemeStore.loadReport() }
-        .refreshable { r = ThemeStore.loadReport() }
+        .onAppear { r = ReportView.load() }
+        .refreshable { r = ReportView.load() }
     }
 
     private func header(_ s: String) -> some View { Text(s).font(.custom(ThemeFont.name, size: 15)) }
@@ -101,8 +110,9 @@ struct ReportView: View {
         let cal = Calendar(identifier: .gregorian)
         let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"
         var thisW = 0, lastW = 0
+        let base = (r?["date"] as? String).flatMap { f.date(from: $0) } ?? Date()
         for i in 0..<14 {
-            guard let d = cal.date(byAdding: .day, value: -i, to: Date()) else { continue }
+            guard let d = cal.date(byAdding: .day, value: -i, to: base) else { continue }
             let v = daily[f.string(from: d)].map { $0.count > slot ? $0[slot] : 0 } ?? 0
             if i < 7 { thisW += v } else { lastW += v }
         }

@@ -31,6 +31,7 @@ struct LearnData: Codable {
     var countDone: Int? = nil             // 마지막으로 보여준 오타 기념일
     var dayDone: Int? = nil               // 마지막으로 보여준 날짜 기념일
     var reached: [String]? = nil          // 받은 기념일 기록 ("c22", "d100" …)
+    var reportAt: Int? = nil              // 마지막으로 앱에 올린 리포트 (고친 오타 100개 단위)
 }
 
 enum ThumbType { case vertical, horizontal, even, unknown }
@@ -58,7 +59,6 @@ final class Learner {
         if let d = try? JSONEncoder().encode(data) {
             UserDefaults.standard.set(d, forKey: storeKey)
         }
-        if let r = reportData() { ThemeStore.saveReport(r) }
     }
 
     // 어미 자리 기록 (초성 기록과 따로)
@@ -132,9 +132,20 @@ final class Learner {
         return m
     }
 
+    /// 고친 오타가 100개 단위(100·200·300…)에 닿으면 리포트를 앱에 올림. 올렸으면 그 개수를 돌려줌
+    func publishReportIfDue() -> Int? {
+        let h = totalFixes / 100 * 100
+        guard h >= 100, h > (data.reportAt ?? 0) else { return nil }
+        data.reportAt = h
+        if let r = reportData(at: h) { ThemeStore.saveReport(r) }
+        return h
+    }
+
     /// 앱 리포트용 요약 (글자 내용 없이 횟수·키 위치만)
-    func reportData() -> Data? {
+    func reportData(at: Int) -> Data? {
         var r: [String: Any] = [:]
+        r["at"] = at
+        r["date"] = Learner.today()
         r["taps"] = [data.taps, data.tapsEn ?? 0]
         r["fixes"] = [data.fixes, data.fixesEn ?? 0]
         r["daily"] = data.daily ?? [:]

@@ -94,12 +94,21 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     }
 
     /// 오타 기념일 확인 (고친 개수가 22·100·200… 에 닿으면 말풍선)
+    /// 오타 기념일 + 100개마다 리포트 올리기. 팻핑이가 키보드에서 알려줌
     private func checkCountMilestone() {
-        guard let m = learner.newCountMilestone() else { return }
-        learner.saveSoon()
+        let m = learner.newCountMilestone()
+        let r = learner.publishReportIfDue()
+        guard m != nil || r != nil else { return }
+        learner.saveNow()
         if ThemeStore.bool("fe.toastOff") { return }
-        let t = Anniversary.countText(theme: kv.theme.id, n: m)
-        kv.showToast(t.0, t.1)
+        if let m = m {
+            var t = Anniversary.countText(theme: kv.theme.id, n: m)
+            if r != nil { t.1 = "📊 " + Anniversary.reportSub }
+            kv.showToast(t.0, t.1)
+        } else if let r = r {
+            let t = Anniversary.reportText(r)
+            kv.showToast(t.0, t.1)
+        }
     }
 
     private func countFix(english: Bool) {
@@ -223,6 +232,8 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     }
 
     private func typeLetter(_ id: String, _ p: CGPoint, _ raw: String) {
+        checkExternalChange()   // 화면에서 사라진 옛 단어를 붙잡고 있지 않게
+        wholeSyllable = false
         retypeLearn(id)
         confirmPrev()
 
@@ -271,6 +282,20 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         autoCap()
     }
 
+    /// ⌫가 앞 글자로 넘어갔는지 (아이폰·삼성 기본 키보드처럼: 지금 쓰던 글자만 자모 단위, 그 앞 글자는 통째로)
+    private var wholeSyllable = false
+
+    /// 지운 만큼 친 기록을 '지운 것들'로 옮김 (다시 치면 같은 자리끼리 비교해서 배움)
+    private func moveToDelBuf(_ n: Int) {
+        if reIdx > 0 { clearDel() }
+        for _ in 0..<max(n, 1) {
+            let m: TapMeta? = history.isEmpty ? nil : history.removeLast()
+            delBuf.insert(m, at: 0)
+        }
+        while delBuf.count > 12 { delBuf.removeLast() }
+        delT = Date()
+    }
+
     private func backspace() {
         // 자동 어미 교정 직후 ⌫ → 원래대로 되돌리고 이 조합은 다시 안 고침
         if let la = lastAuto, tokens.count == la.idx + 2 {
@@ -283,34 +308,35 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             return
         }
         lastAuto = nil
-        let m: TapMeta? = history.isEmpty ? nil : history.removeLast()
-        if reIdx > 0 { clearDel() }
-        delBuf.insert(m, at: 0)
-        if delBuf.count > 12 { delBuf.removeLast() }
-        delT = Date()
+        checkExternalChange()   // 화면엔 '다'만 있는데 옛 단어(습니다)를 지우는 일 방지
 
         if !tokens.isEmpty {
-            tokens.removeLast()
+            let before = Hangul.assemble(tokens)
+            if wholeSyllable {
+                // 앞 글자는 통째로: 마지막 글자 하나가 사라질 만큼 자모를 덜어냄
+                let target = String(before.dropLast())
+                var k = 1
+                while k < tokens.count && Hangul.assemble(Array(tokens.prefix(tokens.count - k))) != target { k += 1 }
+                moveToDelBuf(k)
+                tokens.removeLast(k)
+            } else {
+                // 지금 쓰던 글자는 자모 하나씩 (습니다 → 습니ㄷ → 습니)
+                moveToDelBuf(1)
+                tokens.removeLast()
+                if Hangul.assemble(tokens).count < before.count { wholeSyllable = true }
+            }
             applyTokens()
             return
         }
-        // 조합 중이 아니면, 앞 글자를 자모로 풀어서 한 자모만 지움.
-        // 단, 방금 글자를 바꾼 직후나 ⌫를 꾹 누르는 중에는 앱이 알려주는 앞 글자가 아직 옛날 것일 수 있어서
-        // (그걸 믿고 풀면 지운 글자가 다시 살아나 겹침) 그때는 글자 하나를 통째로 지움
-        let fresh = Date().timeIntervalSince(lastEditAt) > 0.4 && repeatTimer == nil
-        if fresh, let before = textDocumentProxy.documentContextBeforeInput, let last = before.last,
-           let jamo = Hangul.decompose(last), jamo.count > 1 {
-            composing = true
-            textDocumentProxy.deleteBackward()
-            tokens = Array(jamo.dropLast())
-            shown = ""
-            composing = false
-            applyTokens()
-        } else {
-            textDocumentProxy.deleteBackward()
-            lastEditAt = Date()
-            if !fresh { history.removeAll(); clearDel() }   // 통째로 지웠으면 다시 치기 학습은 이번엔 쉼
+        // 이미 확정된 글자(띄어쓰기 뒤 등)는 기본 키보드처럼 한 글자씩 통째로 지움
+        var n = 1
+        if Date().timeIntervalSince(lastEditAt) > 0.4, repeatTimer == nil,
+           let last = textDocumentProxy.documentContextBeforeInput?.last, let j = Hangul.decompose(last) {
+            n = j.count
         }
+        moveToDelBuf(n)
+        textDocumentProxy.deleteBackward()
+        lastEditAt = Date()
     }
 
     // MARK: - 한글 조합
@@ -336,6 +362,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     }
 
     private func commitComposition() {
+        wholeSyllable = false
         tokens = []
         shown = ""
     }
@@ -344,8 +371,10 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         // 방금 내가 글자를 바꾼 직후에는 앱이 화면 글자를 늦게 알려줄 수 있음.
         // 그때 잘못 판단해서 조합을 끊으면 "ㅇㅏㄴ"처럼 갈라지므로 무시.
         guard !composing, !shown.isEmpty, Date().timeIntervalSince(lastEditAt) > 0.35 else { return }
-        if let before = textDocumentProxy.documentContextBeforeInput, !before.hasSuffix(shown) {
-            // 사용자가 커서를 옮겼거나 앱이 글을 비움(카톡 전송 등)
+        // 입력창이 비면(카톡 전송 등) 앱이 앞 글자를 nil로 알려줌 → 빈 칸으로 보고 확인
+        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        if !before.hasSuffix(shown) {
+            // 사용자가 커서를 옮겼거나 앱이 글을 비움 → 들고 있던 단어는 놓아줌
             commitComposition()
         }
     }
