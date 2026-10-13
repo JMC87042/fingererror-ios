@@ -395,8 +395,12 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         // 방금 내가 글자를 바꾼 직후에는 앱이 화면 글자를 늦게 알려줄 수 있음.
         // 그때 잘못 판단해서 조합을 끊으면 "ㅇㅏㄴ"처럼 갈라지므로 무시.
         guard !composing, !shown.isEmpty, Date().timeIntervalSince(lastEditAt) > 0.35 else { return }
-        // 입력창이 비면(카톡 전송 등) 앱이 앞 글자를 nil로 알려줌 → 빈 칸으로 보고 확인
-        let before = textDocumentProxy.documentContextBeforeInput ?? ""
+        // 앱이 앞 글자를 nil로 알려주는 경우가 있음 (카톡 등에서 잠깐씩).
+        // nil이라고 바로 놓아주면 쓰던 글자를 자모로 못 지우고 통째로 지워짐 → 입력창이 정말 비었을 때만 놓아줌
+        guard let before = textDocumentProxy.documentContextBeforeInput else {
+            if !textDocumentProxy.hasText { commitComposition() }   // 카톡 전송 등으로 입력창이 비었음
+            return
+        }
         if !before.hasSuffix(shown) {
             // 사용자가 커서를 옮겼거나 앱이 글을 비움 → 들고 있던 단어는 놓아줌
             commitComposition()
