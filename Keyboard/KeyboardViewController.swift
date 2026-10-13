@@ -344,10 +344,9 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
                 moveToDelBuf(k)
                 tokens.removeLast(k)
             } else {
-                // 지금 쓰던 글자는 자모 하나씩 (습니다 → 습니ㄷ → 습니)
+                // 띄어쓰기 전 단어는 끝까지 자모 하나씩 (습니다 → 습니ㄷ → 습니 → 습ㄴ → 습 → 스 → ㅅ)
                 moveToDelBuf(1)
                 tokens.removeLast()
-                if Hangul.assemble(tokens).count < before.count { wholeSyllable = true }
             }
             applyTokens()
             return
@@ -376,11 +375,19 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         for _ in i..<o.count { textDocumentProxy.deleteBackward() }
         if i < n.count { textDocumentProxy.insertText(String(n[i...])) }
         shown = new
-        // 길게 이어 치면 마지막 글자만 조합 중으로 남김
-        if tokens.count > 30, let lastCh = n.last, let j = Hangul.decompose(lastCh) {
-            tokens = j
-            lastAuto = nil
-            shown = String(lastCh)
+        // 띄어쓰기 없이 아주 길게 이어 치면 뒤쪽 글자들만 조합 중으로 남김 (그 앞은 통째로 지워짐)
+        if tokens.count > 90 {
+            var keep: [String] = [], kept = ""
+            for ch in n.reversed() {
+                guard let j = Hangul.decompose(ch), keep.count + j.count <= 60 else { break }
+                keep = j + keep
+                kept = String(ch) + kept
+            }
+            if !keep.isEmpty {
+                tokens = keep
+                lastAuto = nil
+                shown = kept
+            }
         }
         composing = false
     }
