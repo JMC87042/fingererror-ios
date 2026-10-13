@@ -172,6 +172,21 @@ enum ThemeStore {
         for d in suites() { d.set(data, forKey: "fe.report"); d.set(ts, forKey: "fe.reportTS") }
     }
 
+    // MARK: - 데이터 초기화 (앱에서 누르면 키보드가 다음에 열릴 때 지움)
+
+    static func requestReset() {
+        let ts = Date().timeIntervalSince1970
+        for d in suites() {
+            d.set(ts, forKey: "fe.resetAt")
+            d.removeObject(forKey: "fe.report")
+            d.set(ts, forKey: "fe.reportTS")
+        }
+    }
+
+    static func resetStamp() -> Double {
+        suites().map { $0.double(forKey: "fe.resetAt") }.max() ?? 0
+    }
+
     static func loadReport() -> [String: Any]? {
         var best: Data?, bestTs = -1.0
         for d in suites() {

@@ -5,6 +5,8 @@ struct ReportView: View {
     @State private var english = false
     @State private var toastOn = !ThemeStore.bool("fe.toastOff")
     @State private var r: [String: Any]? = ReportView.load()
+    @State private var askReset = false
+    @State private var didReset = false
 
     /// 100개마다 올라온 리포트만 씀 (예전 방식 기록은 무시)
     static func load() -> [String: Any]? {
@@ -91,8 +93,26 @@ struct ReportView: View {
             } footer: {
                 Text("이 기록은 폰 안에만 있고, 친 글은 저장하지 않아요.")
             }
+            Section {
+                Button(role: .destructive) { askReset = true } label: {
+                    Text(didReset ? "초기화했어요 · 키보드를 열면 적용돼요" : "데이터 초기화")
+                }
+                .disabled(didReset)
+            } footer: {
+                Text("엄지 습관, 고친 오타 수, 리포트, 기념일이 모두 지워지고 처음부터 다시 배워요. 테마와 설정은 그대로예요.")
+            }
         }
         .navigationTitle("내 엄지 리포트")
+        .alert("데이터를 초기화할까요?", isPresented: $askReset) {
+            Button("초기화", role: .destructive) {
+                ThemeStore.requestReset()
+                r = nil
+                didReset = true
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("지금까지 배운 엄지 습관과 리포트가 모두 지워져요. 되돌릴 수 없어요.")
+        }
         .onAppear { r = ReportView.load() }
         .refreshable { r = ReportView.load() }
     }

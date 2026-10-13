@@ -425,6 +425,9 @@ final class KeyboardView: UIView {
         langTouch = nil
     }
 
+    /// 팻핑이 메뉴에 보일 진행 상황 ("고친 오타 412개 · 다음 리포트 500개")
+    var menuStatus = ""
+
     // 기념일 말풍선
     private let toast = ToastView()
     func showToast(_ title: String, _ sub: String) {
@@ -451,7 +454,7 @@ final class KeyboardView: UIView {
         menuTouch = oid
         let space = keys.first(where: { $0.id == "SPACE" })?.frame ?? CGRect(x: 0, y: bounds.height - 50, width: bounds.width, height: 46)
         menu.frame = bounds
-        menu.show(current: theme.id, above: space)
+        menu.show(current: theme.id, above: space, status: menuStatus)
         addSubview(menu)
     }
 
@@ -560,6 +563,12 @@ final class ThemeMenuView: UIView {
         header.font = ThemeFont.ui(16)
         header.textColor = UIColor(red: 30 / 255, green: 32 / 255, blue: 40 / 255, alpha: 1)
         panel.addSubview(header)
+        status.font = .systemFont(ofSize: 11, weight: .medium)
+        status.textColor = UIColor(red: 120 / 255, green: 120 / 255, blue: 128 / 255, alpha: 1)
+        status.textAlignment = .right
+        status.adjustsFontSizeToFitWidth = true
+        status.minimumScaleFactor = 0.7
+        panel.addSubview(status)
         for t in KBTheme.all {
             let box = UIView()
             box.layer.cornerRadius = 7
@@ -584,8 +593,11 @@ final class ThemeMenuView: UIView {
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    func show(current: String, above space: CGRect) {
+    private let status = UILabel()
+
+    func show(current: String, above space: CGRect, status text: String = "") {
         self.current = current
+        status.text = text
         hot = nil
         dim.frame = bounds
         let top: CGFloat = 6
@@ -595,6 +607,7 @@ final class ThemeMenuView: UIView {
         tail.center = CGPoint(x: space.midX, y: panel.frame.maxY)
         let pad: CGFloat = 10
         header.frame = CGRect(x: pad + 2, y: 6, width: panel.bounds.width - pad * 2, height: 22)
+        status.frame = CGRect(x: panel.bounds.width * 0.4, y: 8, width: panel.bounds.width * 0.6 - pad - 2, height: 18)
         let cols = 5
         let g: CGFloat = 6
         let cw = (panel.bounds.width - pad * 2 - g * CGFloat(cols - 1)) / CGFloat(cols)

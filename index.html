@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>핑거에러</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet">
+<style>
+:root{
+  --tray:#DDE3EC; --key:#FFFFFF; --key2:#B9C3D2; --ink:#18202E; --sub:#5B6678;
+  --paper:#F5F7FA; --accent:#E63E7A; --learn:#2F7DE1; --shadow:#9AA6B8;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --tray:#1E2533; --key:#3A4357; --key2:#283042; --ink:#EEF1F6; --sub:#9AA4B6;
+    --paper:#141922; --accent:#FF5C94; --learn:#5AA2FF; --shadow:#0C1018;
+  }
+}
+:root[data-theme="dark"]{
+  --tray:#1E2533; --key:#3A4357; --key2:#283042; --ink:#EEF1F6; --sub:#9AA4B6;
+  --paper:#141922; --accent:#FF5C94; --learn:#5AA2FF; --shadow:#0C1018;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;touch-action:manipulation;-webkit-text-size-adjust:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;height:100%;touch-action:manipulation;background:var(--paper);color:var(--ink);
+  font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+  display:flex;flex-direction:column;overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+}
+.top{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 4px}
+.logo{margin:0;font-family:"Black Han Sans","Apple SD Gothic Neo",sans-serif;font-weight:400;font-size:26px;letter-spacing:-.5px;line-height:1}
+.logo small{display:block;font-family:inherit;font-size:12px;color:var(--sub);font-family:-apple-system,"Apple SD Gothic Neo",sans-serif;margin-top:4px;letter-spacing:0}
+.btn{appearance:none;border:0;border-radius:999px;padding:9px 14px;font:inherit;font-size:14px;font-weight:600;background:var(--key2);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn:focus-visible{outline:2px solid var(--learn);outline-offset:2px}
+.editor{flex:1;overflow-y:auto;padding:12px 18px;font-size:20px;line-height:1.55;white-space:pre-wrap;word-break:break-all}
+.editor .ph{color:var(--sub);font-size:16px}
+.cursor{display:inline-block;width:2px;height:1.1em;background:var(--learn);vertical-align:-.15em;margin-left:1px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.toolbar{display:flex;gap:8px;align-items:center;padding:6px 12px}
+.toolbar .count{flex:1;font-size:13px;color:var(--sub)}
+.kb{position:relative;background:var(--tray);padding:8px 3px 10px;touch-action:none}
+.row{display:flex;justify-content:center;gap:6px;margin-bottom:10px}
+.row:last-child{margin-bottom:0}
+.k{position:relative;height:46px;border-radius:6px;background:var(--key);box-shadow:0 1px 0 var(--shadow);
+  display:flex;align-items:center;justify-content:center;font-size:21px;color:var(--ink);flex:none}
+.k.sp{background:var(--key2);font-size:15px;font-weight:600}
+.k.on{background:var(--ink);color:var(--paper)}
+.k.down{background:var(--key2)}
+.k.sp.down{background:var(--key)}
+.dot{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--accent);opacity:0;pointer-events:none}
+.kb.dots .dot.has{opacity:.85}
+.kb.dots .k.letter::after{content:"";position:absolute;left:50%;top:50%;width:3px;height:3px;margin:-1.5px;border-radius:50%;background:var(--sub);opacity:.6}
+.pop{position:absolute;width:52px;height:56px;margin-left:-26px;border-radius:10px;background:var(--key);color:var(--ink);
+  box-shadow:0 2px 10px rgba(0,0,0,.25);display:none;align-items:center;justify-content:center;font-size:30px;pointer-events:none;z-index:3}
+.pop.show{display:flex}
+#hapt{position:fixed;left:-200px;top:0;opacity:0;pointer-events:none}
+.editor.typing .cursor{animation:none}
+.diag{font-size:12px;line-height:1.5;color:var(--sub);padding:4px 12px;background:var(--tray);white-space:pre-wrap}
+.mark{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;pointer-events:none;z-index:2;
+  font-size:9px;line-height:12px;text-align:center;color:#fff;font-weight:700}
+.mark.ok{background:var(--learn)}
+.mark.fix{background:var(--accent)}
+.mark.out{background:#888}
+.toast{position:fixed;left:50%;transform:translate(-50%,8px);opacity:0;pointer-events:none;
+  background:var(--ink);color:var(--paper);border-radius:14px;padding:10px 16px;text-align:center;transition:opacity .15s,transform .15s;z-index:5}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast b{display:block;font-size:26px;line-height:1.1;letter-spacing:1px}
+.toast span{font-size:12px;opacity:.75}
+.toast.fix b{color:var(--accent)}
+.toast.learn b{color:var(--learn)}
+.panel{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-end;z-index:10}
+.panel.open{display:flex}
+.sheet{width:100%;max-height:85%;overflow-y:auto;background:var(--paper);border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px))}
+.sheet h2{margin:0 0 4px;font-size:19px}
+.sheet p{margin:0 0 14px;color:var(--sub);font-size:14px;line-height:1.55;max-width:60ch}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.nums div{background:var(--tray);border-radius:12px;padding:10px}
+.nums strong{display:block;font-size:22px}
+.nums span{font-size:12px;color:var(--sub)}
+.pairs{list-style:none;margin:0 0 16px;padding:0}
+.type{background:var(--tray);border-radius:14px;padding:14px;margin-bottom:16px}
+.type strong{display:block;font-size:20px;margin-bottom:4px}
+.type span{font-size:14px;color:var(--sub);line-height:1.5}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;margin-top:12px;background:var(--key2)}
+.bar i{display:block;height:100%}
+#barH{background:var(--learn)}#barV{background:var(--accent)}
+.barlab{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);margin-top:4px}
+.pairs li{display:flex;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--key2);font-size:16px}
+.pairs li em{font-style:normal;color:var(--sub);font-size:14px}
+.opt{display:flex;align-items:center;justify-content:space-between;padding:10px 2px;font-size:15px}
+.opt input{width:22px;height:22px;accent-color:var(--accent)}
+.sheet .actions{display:flex;gap:8px;margin-top:12px}
+@media (prefers-reduced-motion: reduce){.cursor{animation:none}.toast{transition:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1 class="logo">핑거에러<small>쓸수록 내 엄지에 맞춰지는 키보드</small></h1>
+  <button class="btn" id="statsBtn" type="button">학습 현황</button>
+</header>
+
+<div class="editor" id="editor" aria-live="polite"></div>
+
+<div class="toolbar">
+  <span class="count" id="count"></span>
+  <button class="btn" id="clearBtn" type="button">전체 삭제</button>
+  <button class="btn primary" id="copyBtn" type="button">복사</button>
+</div>
+
+<div class="diag" id="diag" hidden></div>
+<div class="kb" id="kb"></div>
+<div class="toast" id="toast"><b></b><span></span></div>
+<label id="hapt" aria-hidden="true"><input type="checkbox" switch tabindex="-1"></label>
+
+<div class="panel" id="panel">
+  <div class="sheet" role="dialog" aria-label="학습 현황">
+    <h2 id="statTitle">학습 현황</h2>
+    <p>틀린 글자를 지우고 바로 다시 치면, 원래 누르려던 키와 실제 눌린 위치를 배워요. 쌓일수록 그 키의 눌리는 영역이 내 엄지 쪽으로 옮겨가서 같은 실수를 자동으로 바꿔줘요. 사람마다 기록이 따로 쌓여요.</p>
+    <p id="syncNote">기록은 이 기기 안에만 저장돼요.</p>
+    <div class="nums">
+      <div><strong id="nTaps">0</strong><span>학습한 터치</span></div>
+      <div><strong id="nLearn">0</strong><span>지우고 고친 횟수</span></div>
+      <div><strong id="nFix">0</strong><span>자동으로 바꾼 횟수</span></div>
+    </div>
+    <p id="sideNote"></p>
+    <div class="type" id="typeBox"><strong id="typeName">분석 중</strong><span id="typeDesc"></span>
+      <div class="bar"><i id="barH"></i><i id="barV"></i></div>
+      <div class="barlab"><span id="labH">양옆 0회</span><span id="labV">위아래 0회</span></div>
+    </div>
+    <h2>주로 틀리는 곳</h2>
+    <ul class="pairs" id="cellList"></ul>
+    <h2>자주 헷갈리는 키</h2>
+    <ul class="pairs" id="pairs"></ul>
+    <label class="opt">자동 교정<input type="checkbox" id="optFix"></label>
+    <label class="opt">엄지 지점 보기<input type="checkbox" id="optDots"></label>
+    <label class="opt">진단 모드 (터치 기록 보기)<input type="checkbox" id="optDiag"></label>
+    <label class="opt">진동 켜기 (입력이 씹히면 끄세요)<input type="checkbox" id="optHapt"></label>
+    <div class="actions">
+      <button class="btn" id="resetBtn" type="button">학습 초기화</button>
+      <button class="btn primary" id="closeBtn" type="button" style="margin-left:auto">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------- 한글 조합 ----------
+  const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+  const JUNG = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ';
+  const JONG = ['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+  const VCOMB = {'ㅗㅏ':'ㅘ','ㅗㅐ':'ㅙ','ㅗㅣ':'ㅚ','ㅜㅓ':'ㅝ','ㅜㅔ':'ㅞ','ㅜㅣ':'ㅟ','ㅡㅣ':'ㅢ'};
+  const JCOMB = {'ㄱㅅ':'ㄳ','ㄴㅈ':'ㄵ','ㄴㅎ':'ㄶ','ㄹㄱ':'ㄺ','ㄹㅁ':'ㄻ','ㄹㅂ':'ㄼ','ㄹㅅ':'ㄽ','ㄹㅌ':'ㄾ','ㄹㅍ':'ㄿ','ㄹㅎ':'ㅀ','ㅂㅅ':'ㅄ'};
+  const JSPLIT = {};
+  for (const k in JCOMB) JSPLIT[JCOMB[k]] = [k[0], k[1]];
+  const isC = c => CHO.includes(c);
+  const isV = c => 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅛㅜㅠㅡㅣ'.includes(c);
+
+  function assemble(tokens) {
+    let out = '', cho = null, jung = null, jong = null;
+    const flush = () => {
+      if (cho && jung) {
+        out += String.fromCharCode(0xAC00 + (CHO.indexOf(cho) * 21 + JUNG.indexOf(jung)) * 28 + JONG.indexOf(jong || ''));
+      } else { if (cho) out += cho; if (jung) out += jung; }
+      cho = jung = jong = null;
+    };
+    for (const t of tokens) {
+      if (isC(t)) {
+        if (!cho && !jung) cho = t;
+        else if (cho && !jung) { flush(); cho = t; }
+        else if (jung && !jong) { if (cho && JONG.includes(t)) jong = t; else { flush(); cho = t; } }
+        else { const c = JCOMB[jong + t]; if (c) jong = c; else { flush(); cho = t; } }
+      } else if (isV(t)) {
+        if (jong) {
+          let move;
+          if (JSPLIT[jong]) { const [a, b] = JSPLIT[jong]; jong = a; move = b; }
+          else { move = jong; jong = null; }
+          flush(); cho = move; jung = t;
+        } else if (jung) {
+          const c = VCOMB[jung + t]; if (c) jung = c; else { flush(); jung = t; }
+        } else jung = t;
+      } else { flush(); out += t; }
+    }
+    flush();
+    return out;
+  }
+
+  // ---------- 자판 ----------
+  const ROWS = [
+    ['ㅂ','ㅈ','ㄷ','ㄱ','ㅅ','ㅛ','ㅕ','ㅑ','ㅐ','ㅔ'],
+    ['ㅁ','ㄴ','ㅇ','ㄹ','ㅎ','ㅗ','ㅓ','ㅏ','ㅣ'],
+    ['SHIFT','ㅋ','ㅌ','ㅊ','ㅍ','ㅠ','ㅜ','ㅡ','BS'],
+    [',','?','SPACE','.','ENTER']
+  ];
+  const SHIFTMAP = {'ㅂ':'ㅃ','ㅈ':'ㅉ','ㄷ':'ㄸ','ㄱ':'ㄲ','ㅅ':'ㅆ','ㅐ':'ㅒ','ㅔ':'ㅖ'};
+  const LABEL = {SHIFT:'⇧', BS:'⌫', SPACE:'스페이스', ENTER:'줄바꿈'};
+  const GAP = 6, ROWGAP = 10;
+
+  const kb = document.getElementById('kb');
+  const editor = document.getElementById('editor');
+  const toastEl = document.getElementById('toast');
+  const keys = [];          // {id, el, letter, x,y,w,h,cx,cy, dot}
+  const keyMap = {};
+
+  ROWS.forEach((row, ri) => {
+    const r = document.createElement('div'); r.className = 'row';
+    row.forEach(id => {
+      const el = document.createElement('div');
+      const letter = isC(id) || isV(id);
+      el.className = 'k ' + (letter ? 'letter' : 'sp');
+      el.textContent = LABEL[id] || id;
+      el.setAttribute('aria-hidden', 'true');
+      const k = { id, el, letter, row: ri };
+      if (letter) { const d = document.createElement('i'); d.className = 'dot'; el.appendChild(d); k.dot = d; }
+      keys.push(k); keyMap[id] = k; r.appendChild(el);
+    });
+    kb.appendChild(r);
+  });
+
+  let kbW = 0, kbH = 0, kbL = 0, kbT = 0;
+  // 한 손 자판: 자판을 엄지 쪽으로 붙이고 폭을 줄임
+  const HAND_LABEL = { both: '양손 자판', right: '오른손 자판', left: '왼손 자판' };
+  function layout() {
+    const full = kb.clientWidth - 6;
+    const hand = (typeof ROOT !== 'undefined' && ROOT.hand) || 'both';
+    const extra = hand === 'both' ? 0 : Math.round(full * 0.14);
+    kb.style.paddingLeft = (3 + (hand === 'right' ? extra : 0)) + 'px';
+    kb.style.paddingRight = (3 + (hand === 'left' ? extra : 0)) + 'px';
+    const W = full - extra;
+    const kw = (W - 9 * GAP) / 10;
+    const setW = (id, w) => { keyMap[id].el.style.width = w + 'px'; };
+    ROWS[0].forEach(id => setW(id, kw));
+    ROWS[1].forEach(id => setW(id, kw));
+    ROWS[2].forEach(id => setW(id, (id === 'SHIFT' || id === 'BS') ? (W - 7 * kw - 8 * GAP) / 2 : kw));
+    setW(',', kw); setW('?', kw); setW('.', kw); setW('ENTER', kw * 2 + GAP);
+    setW('SPACE', W - 5 * kw - GAP - 4 * GAP);
+    measure();
+  }
+  function measure() {
+    const kr = kb.getBoundingClientRect();
+    kbW = kr.width; kbH = kr.height; kbL = kr.left; kbT = kr.top;
+    keys.forEach(k => {
+      const r = k.el.getBoundingClientRect();
+      k.x = r.left - kr.left; k.y = r.top - kr.top; k.w = r.width; k.h = r.height;
+      k.cx = k.x + k.w / 2; k.cy = k.y + k.h / 2;
+    });
+    drawDots();
+  }
+
+  // ---------- 학습 데이터 ----------
+  // 사람마다 따로: 계정별(로그인한 사람마다 자동 분리) + 한 기기 안에서도 사용자 여러 명
+  const STORE = 'fingererror.v2';
+  const blank = name => ({ name, off: {}, conf: {}, stats: { taps: 0, learned: 0, fixes: 0 }, fixOn: true, dots: false });
+  const fixProfile = p => {
+    const b = blank(p.name || '나');
+    const out = Object.assign(b, p);
+    out.stats = Object.assign({ taps: 0, learned: 0, fixes: 0 }, p.stats || {});
+    out.off = out.off || {}; out.conf = out.conf || {};
+    out.spread = Object.assign({ vx: 0.06, vy: 0.06, n: 0 }, p.spread || {});
+    out.dir = Object.assign({ h: 0, v: 0 }, p.dir || {});
+    out.endNo = out.endNo || {}; out.endFix = out.endFix || 0;
+    // 자리별 실수표: 'head|mid|end' _ 'cho|jung|jong' → { '실제로 눌린키>치려던키': 횟수 }
+    out.cell = out.cell || {};
+    out.spConf = out.spConf || {};          // 띄어쓰기·문장부호 실수 { '.>SPACE': 3 }
+    if (out.endConf) { for (const k in out.endConf) { (out.cell.end_cho = out.cell.end_cho || {})[k] = (out.cell.end_cho[k] || 0) + out.endConf[k]; } delete out.endConf; }
+    out.side = Object.assign({ L: { dx: 0, dy: 0, n: 0 }, R: { dx: 0, dy: 0, n: 0 } }, p.side || {});
+    return out;
+  };
+  let ROOT = { profiles: { p1: blank('나') }, cur: 'p1', updatedAt: 0 };
+  try {
+    const raw = localStorage.getItem(STORE);
+    if (raw) ROOT = JSON.parse(raw);
+    else {
+      const old = localStorage.getItem('fingererror.v1');   // 이전 버전 기록 옮기기
+      if (old) ROOT.profiles.p1 = fixProfile(Object.assign(JSON.parse(old), { name: '나' }));
+    }
+  } catch (e) {}
+  function normalize() {
+    if (!ROOT.profiles || !Object.keys(ROOT.profiles).length) ROOT.profiles = { p1: blank('나') };
+    for (const k in ROOT.profiles) ROOT.profiles[k] = fixProfile(ROOT.profiles[k]);
+    if (!ROOT.profiles[ROOT.cur]) ROOT.cur = Object.keys(ROOT.profiles)[0];
+  }
+  normalize();
+  // 위치 오류가 있던 버전에서 쌓인 기록은 한 번 초기화
+  let migrated = false;
+  if (!ROOT.v3) {
+    for (const k in ROOT.profiles) {
+      const p = ROOT.profiles[k];
+      const had = Object.keys(p.off).length > 0;
+      p.off = {}; p.conf = {}; p.stats = { taps: 0, learned: 0, fixes: 0 }; p.spread = { vx: 0.06, vy: 0.06, n: 0 }; p.dir = { h: 0, v: 0 }; p.side = { L: { dx: 0, dy: 0, n: 0 }, R: { dx: 0, dy: 0, n: 0 } };
+      if (had) migrated = true;
+    }
+    ROOT.v3 = true;
+    try { localStorage.setItem(STORE, JSON.stringify(ROOT)); } catch (e) {}
+  }
+  // 이번 버전부터 모두 새로 시작 (양손 자판 하나만)
+  if (!ROOT.v4) {
+    const hadAny = Object.values(ROOT.profiles).some(p => Object.keys(p.off).length > 0);
+    ROOT = { profiles: { p1: blank('나') }, cur: 'p1', hand: 'both', updatedAt: 0, v3: true, v4: true };
+    normalize();
+    if (hadAny) migrated = true;
+    try { localStorage.setItem(STORE, JSON.stringify(ROOT)); } catch (e) {}
+  }
+  ROOT.hand = 'both'; ROOT.cur = 'p1';
+  let S = ROOT.profiles[ROOT.cur];
+
+  let dbRef = null, saveT = null, dbT = null;
+  function save() {
+    ROOT.updatedAt = Date.now();
+    clearTimeout(saveT);
+    saveT = setTimeout(() => { try { localStorage.setItem(STORE, JSON.stringify(ROOT)); } catch (e) {} }, 800);
+    if (dbRef) {
+      clearTimeout(dbT);
+      dbT = setTimeout(() => {
+        dbRef.set({ json: JSON.stringify(ROOT), updatedAt: ROOT.updatedAt }).catch(() => { dbRef = null; setSync(false); });
+      }, 1500);
+    }
+  }
+  let synced = false;
+  function setSync(v) { synced = v; const el = document.getElementById('syncNote'); if (el) el.textContent = v ? '내 계정에 저장돼서 다른 기기에서도 이어져요. 다른 사람은 내 기록을 볼 수 없어요.' : '기록은 이 기기 안에만 저장돼요.'; }
+  // 계정 연결 (claude.ai에서 열었을 때만, 없으면 기기 저장으로 계속 동작)
+  (async () => {
+    if (!window.claude || !window.claude.use) return;
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (!db || !user) return;
+    const uid = await user.id();
+    if (!uid) return;
+    const ref = db.doc('data/users/' + uid + '/fingererror');
+    const snap = await ref.get();
+    if (snap.exists) {
+      const d = snap.data();
+      try {
+        const remote = JSON.parse(d.json);
+        if (remote.v4 && (remote.updatedAt || 0) > (ROOT.updatedAt || 0)) { ROOT = remote; normalize(); S = ROOT.profiles[ROOT.cur]; drawDots(); render(); }
+      } catch (e) {}
+    }
+    dbRef = ref; setSync(true); save();
+  })().catch(() => {});
+
+  // 자판 모양마다 엄지 기록을 따로 (양손 자판은 기존 기록 그대로)
+  function setHand(hand) {
+    confirmPrev(); clearDel();
+    ROOT.hand = hand;
+    const pid = hand === 'both' ? 'p1' : 'p1_' + hand;
+    if (!ROOT.profiles[pid]) ROOT.profiles[pid] = fixProfile({ name: HAND_LABEL[hand] });
+    ROOT.cur = pid; S = ROOT.profiles[pid];
+        layout(); save(); render();
+  }
+  function switchProfile(pid) {
+    confirmPrev(); tokens = []; metas = []; clearDel();
+    ROOT.cur = pid; S = ROOT.profiles[pid];
+    save(); drawDots(); render();
+  }
+  const clamp = (v, a) => Math.max(-a, Math.min(a, v));
+
+  function learn(id, fx, fy, rate) {
+    const k = keyMap[id]; if (!k || fx == null) return;
+    const x = fx * kbW, y = fy * kbH;
+    const ox = clamp((x - k.cx) / k.w, 0.9), oy = clamp((y - k.cy) / k.h, 0.9);
+    // 왼손/오른손 엄지 전체 쏠림 (모음은 대부분 오른쪽)
+    const sd = S.side[sideOf(k)];
+    const sr = Math.max(0.03, 1 / (sd.n + 5));
+    sd.dx = clamp(sd.dx + sr * (ox - sd.dx), 0.35); sd.dy = clamp(sd.dy + sr * (oy - sd.dy), 0.35); sd.n++;
+    const o = S.off[id] || Object.assign({ n: 0 }, effOff(k));
+    // 처음 몇 번은 빠르게 내 위치를 따라감
+    if (rate < 0.1) rate = Math.max(rate, 1 / (o.n + 6));
+    // 가로/세로로 얼마나 흔들리는지 (보정된 중심 기준)
+    const sp = S.spread, r2 = rate > 0.1 ? 0.1 : 0.04;
+    sp.vx += r2 * (Math.min((ox - o.dx) ** 2, 0.5) - sp.vx);
+    sp.vy += r2 * (Math.min((oy - o.dy) ** 2, 0.5) - sp.vy);
+    sp.n++;
+    o.dx = clamp(o.dx + rate * (ox - o.dx), 0.35);
+    o.dy = clamp(o.dy + rate * (oy - o.dy), 0.35);
+    o.n++;
+    S.off[id] = o;
+  }
+  function sideOf(k) { return k.cx < kbW / 2 ? 'L' : 'R'; }
+  // 키의 실제 판정 중심: 그 키 기록이 적으면 같은 쪽 엄지의 전체 쏠림을 빌려 씀
+  function effOff(k) {
+    const sd = S.side[sideOf(k)], o = S.off[k.id];
+    const sw = Math.min(1, sd.n / 10);
+    const bx = sd.dx * sw, by = sd.dy * sw;
+    if (!o) return { dx: bx, dy: by };
+    const w = Math.min(1, o.n / 8);
+    return { dx: o.dx * w + bx * (1 - w), dy: o.dy * w + by * (1 - w) };
+  }
+  // 엄지 타입: 위아래형(v) / 양옆형(h) / 고른형(even) / 분석 중(null)
+  function thumbType() {
+    const sp = S.spread, d = S.dir, total = d.h + d.v;
+    if (sp.n < 30 && total < 20) return { type: null, k: 1, total };
+    let score = 0, w = 0;
+    if (sp.n >= 30) { score += Math.log(sp.vy / sp.vx); w++; }
+    if (total >= 20) { score += Math.log((d.v + 1) / (d.h + 1)); w++; }
+    score /= w;
+    const k = sp.n >= 30 ? clamp(Math.sqrt(sp.vy / sp.vx) - 1, 0.4) + 1 : 1;   // 0.6 ~ 1.4
+    const type = score > 0.25 ? 'v' : score < -0.25 ? 'h' : 'even';
+    return { type, k, total };
+  }
+  function adjacent(a, b) {
+    const A = keyMap[a], B = keyMap[b];
+    return Math.hypot((A.cx - B.cx) / A.w, (A.cy - B.cy) / A.h) < 1.7;
+  }
+
+  // ---------- 키 판정 ----------
+  function pick(x, y) {
+    for (const k of keys) {
+      if (!k.letter && x >= k.x - GAP / 2 && x <= k.x + k.w + GAP / 2 && y >= k.y - ROWGAP / 2 && y <= k.y + k.h + ROWGAP / 2) {
+        // 스페이스·마침표 경계: 내가 자주 헷갈리는 쪽이면 이웃 키로
+        if (S.fixOn && SP_LEARN.has(k.id)) {
+          const nbi = spNeighbor(k, x);
+          if (nbi && nbi.edge < 0.45) {
+            const lean = (S.spConf[k.id + '>' + nbi.nb.id] || 0) - (S.spConf[nbi.nb.id + '>' + k.id] || 0);
+            if (lean >= 2) return { key: nbi.nb.id, raw: k.id };
+          }
+        }
+        return { key: k.id, raw: k.id };
+      }
+    }
+    const letters = keys.filter(k => k.letter);
+    let raw = null, rawD = Infinity;
+    for (const k of letters) {
+      const d = Math.hypot((x - k.cx) / k.w, (y - k.cy) / k.h);
+      if (d < rawD) { rawD = d; raw = k.id; }
+    }
+    if (!S.fixOn) return { key: raw, raw };
+    // 세로로 잘 흔들리는 사람은 판정 영역을 세로로 길게, 가로형은 가로로 길게
+    const t = thumbType();
+    const sq = Math.sqrt(t.k);
+    const c = letters.map(k => {
+      const o = effOff(k);
+      const ex = (x - (k.cx + o.dx * k.w)) / k.w, ey = (y - (k.cy + o.dy * k.h)) / k.h;
+      return { id: k.id, row: k.row, d: Math.hypot(ex * sq, ey / sq) };
+    }).sort((a, b) => a.d - b.d);
+    let chosen = c[0].id;
+    // 경계에 애매하게 닿았으면 자주 하던 실수 기록으로 판단 (내가 잘 틀리는 방향이면 더 쉽게)
+    if (c[1].d / Math.max(c[0].d, 0.01) < 1.25) {
+      // 지금 자리(단어 처음/중간/끝 × 첫자음/모음/받침) 기록이 충분하면 그걸, 아니면 전체 기록을
+      const cl = cellLean(c[0].id, c[1].id, cellsFor(c[1].id));
+      const lean = cl.n >= 4 ? cl.lean : (S.conf[c[0].id + '>' + c[1].id] || 0) - (S.conf[c[1].id + '>' + c[0].id] || 0);
+      const vertical = c[0].row !== c[1].row;
+      const need = (vertical && t.type === 'v') || (!vertical && t.type === 'h') ? 2 : 3;
+      if (lean >= need) chosen = c[1].id;
+    }
+    return { key: chosen, raw };
+  }
+
+  // ---------- 자리 판정: 단어 안 위치(어두·어중·어말) × 글자 안 자리(초성·중성·종성) ----------
+  const POS_NAME = { head: '단어 처음', mid: '단어 중간', end: '단어 끝' };
+  const PART_NAME = { cho: '첫 자음', jung: '모음', jong: '받침' };
+  // 자모 배열에서 각 자모가 몇 번째 글자의 어느 자리인지 (받침이 다음 글자로 넘어가는 것까지 반영)
+  function trackSlots(toks) {
+    const res = []; let syl = -1, cho = null, jung = null, jong = null, jongI = [];
+    const reset = () => { cho = jung = jong = null; jongI = []; };
+    const newCho = (t, i) => { reset(); syl++; cho = t; res[i] = { syl, part: 'cho' }; };
+    toks.forEach((t, i) => {
+      if (isC(t)) {
+        if (!cho && !jung) newCho(t, i);
+        else if (cho && !jung) newCho(t, i);
+        else if (jung && !jong) { if (cho && JONG.includes(t)) { jong = t; jongI = [i]; res[i] = { syl, part: 'jong' }; } else newCho(t, i); }
+        else { const c = JCOMB[jong + t]; if (c) { jong = c; jongI.push(i); res[i] = { syl, part: 'jong' }; } else newCho(t, i); }
+      } else if (isV(t)) {
+        if (jong) {
+          const mi = jongI[jongI.length - 1], mt = toks[mi];
+          reset(); syl++; cho = mt; res[mi] = { syl, part: 'cho' };
+          jung = t; res[i] = { syl, part: 'jung' };
+        } else if (jung) {
+          const c = VCOMB[jung + t];
+          if (c) { jung = c; res[i] = { syl, part: 'jung' }; }
+          else { reset(); syl++; jung = t; res[i] = { syl, part: 'jung' }; }
+        } else { if (!cho) syl++; jung = t; res[i] = { syl, part: 'jung' }; }
+      }
+    });
+    return { res, count: syl + 1 };
+  }
+  const posOf = (syl, count) => syl === 0 ? 'head' : (syl === count - 1 ? 'end' : 'mid');
+  // 지금 누르려는 키가 들어갈 '가능한 칸들' (치는 중엔 확정이 안 되니 후보 여러 개)
+  function cellsFor(keyId) {
+    const st = wordStart(tokens), w = tokens.slice(st);
+    if (!w.length) return isV(keyId) ? ['head_jung'] : ['head_cho'];
+    const { res } = trackSlots(w);
+    const last = res[w.length - 1] || { syl: 0, part: 'cho' };
+    let syl, parts;
+    if (isV(keyId)) { syl = last.part === 'cho' ? last.syl : last.syl + 1; parts = ['jung']; }
+    else if (last.part === 'jung') { syl = last.syl; parts = ['jong', 'cho']; }   // 받침일 수도, 다음 글자 첫 자음일 수도
+    else { syl = last.syl + 1; parts = ['cho']; }
+    const poss = syl === 0 ? ['head'] : ['mid', 'end'];
+    const out = [];
+    poss.forEach(p => parts.forEach(q => out.push(p + '_' + q)));
+    return out;
+  }
+  function cellLean(a, b, cells) {
+    let lean = 0, n = 0;
+    for (const c of cells) {
+      const t = S.cell[c]; if (!t) continue;
+      lean += (t[a + '>' + b] || 0) - (t[b + '>' + a] || 0);
+      for (const k in t) n += t[k];
+    }
+    return { lean, n };
+  }
+  // 이번 단어에서 지우고 고친 기록 (단어가 끝나면 정확한 칸으로 저장)
+  let wordEv = [];
+  function finalizeWord() {
+    const st = wordStart(tokens), w = tokens.slice(st);
+    if (!wordEv.length) return;
+    const { res, count } = trackSlots(w);
+    for (const ev of wordEv) {
+      const r = res[ev.i - st];
+      if (!r) continue;
+      const cell = posOf(r.syl, count) + '_' + r.part;
+      const t = S.cell[cell] = S.cell[cell] || {};
+      const key = ev.wrong + '>' + ev.right;
+      t[key] = (t[key] || 0) + 1;
+      if (cell.startsWith('end')) {
+        // 말끝 실수는 그 칸에만 (단어 처음의 같은 키는 영향 안 받게)
+        S.conf[key] = Math.max(0, (S.conf[key] || 0) - 1);
+      } else {
+        learn(ev.right, ev.fx, ev.fy, 0.12);   // 엄지 위치 보정은 말끝이 아닐 때만
+      }
+    }
+    wordEv = [];
+  }
+
+  // ---------- 띄어쓰기·문장부호 (스페이스를 쳤는데 . 이 찍히는 경우 등) ----------
+  const SP_LEARN = new Set(['SPACE', '.', ',', '?', 'ENTER']);
+  const SP_CH = { SPACE: ' ', ENTER: '\n' };
+  const chOfSp = id => SP_CH[id] || id;
+  function spNeighbor(k, x) {
+    const row = keys.filter(o => o.row === k.row).sort((a, b) => a.x - b.x);
+    const i = row.indexOf(k);
+    const fromLeft = (x - k.x) / k.w;
+    const nb = fromLeft < 0.5 ? row[i - 1] : row[i + 1];
+    const edge = fromLeft < 0.5 ? fromLeft : 1 - fromLeft;   // 이웃 쪽 가장자리까지 거리 (키 폭 대비)
+    return nb && SP_LEARN.has(nb.id) ? { nb, edge: edge * k.w / Math.min(k.w, keyMap['.'].w) } : null;
+  }
+
+  // ---------- 어미 교정 (밥먹었어료 → 밥먹었어요) ----------
+  // '요' 앞에 자주 오는 글자 (받침 없음). 자료·재료·나쵸·아뇨·아교 같은 진짜 단어는 피하도록 고름
+  const END_PREV = new Set('어아에세네해여워와예래게데줘봐돼써가거서져려대케레셔쳐펴혀까떠냐니지시'.split(''));
+  const END_BASE = new Set(['ㄹ', 'ㅌ', 'ㄷ', 'ㅊ']);       // ㅇ 옆에 있어서 잘못 눌리는 키
+  const JAMO_RE = /^[ㄱ-ㅣ]$/;
+  function wordStart(arr) { let i = arr.length; while (i > 0 && JAMO_RE.test(arr[i - 1])) i--; return i; }
+  // 지금 칠 자리가 '어미 자리'인지 (받침 없는 END_PREV 글자 바로 뒤)
+  function prevSyllable(arr) {
+    const st = wordStart(arr);
+    if (arr.length - st < 1 || !isV(arr[arr.length - 1]) && !Object.values(VCOMB).includes(arr[arr.length - 1])) return null;
+    const w = assemble(arr.slice(st));
+    return w.slice(-1);
+  }
+  let lastAuto = null;   // 바로 ⌫ 누르면 되돌리기용
+  function endCheck() {
+    const n = tokens.length;
+    if (n < 3 || tokens[n - 1] !== 'ㅛ') return;
+    const c = tokens[n - 2];
+    if (!isC(c) || c === 'ㅇ') return;
+    const before = tokens.slice(0, n - 2);
+    const p = prevSyllable(before);
+    if (!p || !END_PREV.has(p)) return;
+    if (S.endNo[p + c]) return;                                       // 되돌린 적 있는 조합은 안 고침
+    const learned = ((S.cell.end_cho || {})[c + '>ㅇ'] || 0) >= 2;
+    if (!END_BASE.has(c) && !(learned && adjacent(c, 'ㅇ'))) return;
+    tokens[n - 2] = 'ㅇ';
+    if (metas[n - 2]) metas[n - 2].id = 'ㅇ';
+    lastAuto = { idx: n - 2, orig: c, key: p + c };
+    S.endFix++; S.stats.fixes++;
+    toast(p + assemble([c, 'ㅛ']) + ' → ' + p + '요', '어미 교정', 'fix');
+  }
+
+  // ---------- 입력 ----------
+  let tokens = [], metas = [], shift = false;
+  // 지운 글자들(원래 순서)과 다시 치는 위치
+  let delBuf = [], reIdx = 0, delT = 0;
+  const clearDel = () => { delBuf = []; reIdx = 0; };
+
+  function confirmPrev() {
+    const pm = metas[metas.length - 1];
+    if (pm && !pm.ok) { learn(pm.id, pm.fx, pm.fy, 0.04); pm.ok = true; if (pm.fx != null) S.stats.taps++; }
+  }
+
+  function typeLetter(id, fx, fy, raw) {
+    // 여러 글자를 지우고 다시 쳐도, 같은 자리끼리 비교해서 배움
+    if (delBuf.length && reIdx < delBuf.length && Date.now() - delT < 10000) {
+      const orig = delBuf[reIdx];
+      if (orig && !orig.sp && orig.id !== id && adjacent(orig.id, id)) {
+        // 어느 자리에서 틀렸는지는 단어가 끝날 때 정확히 저장
+        wordEv.push({ i: tokens.length, wrong: orig.id, right: id, fx: orig.fx, fy: orig.fy });
+        S.conf[orig.id + '>' + id] = (S.conf[orig.id + '>' + id] || 0) + 1;
+        S.stats.learned++;
+        if (keyMap[orig.id].row === keyMap[id].row) S.dir.h++; else S.dir.v++;
+        toast(orig.id + ' → ' + id, '배웠어요', 'learn');
+      }
+      reIdx++;
+      if (reIdx >= delBuf.length) clearDel();
+    } else if (delBuf.length) clearDel();
+    confirmPrev();
+    let ch = id;
+    if (shift) { ch = SHIFTMAP[id] || id; setShift(false); }
+    lastAuto = null;
+    // 단어 바로 뒤 . 이나 , 를 찍고 띄어쓰기 없이 다음 글자를 치면 → 스페이스였던 것 (그렇게 자주 틀리는 사람만)
+    const n0 = tokens.length;
+    if (S.fixOn && n0 >= 2 && (tokens[n0 - 1] === '.' || tokens[n0 - 1] === ',') && JAMO_RE.test(tokens[n0 - 2])) {
+      const p = tokens[n0 - 1];
+      if ((S.spConf[p + '>SPACE'] || 0) - (S.spConf['SPACE>' + p] || 0) >= 2) {
+        tokens[n0 - 1] = ' ';
+        if (metas[n0 - 1]) metas[n0 - 1].id = 'SPACE';
+        S.stats.fixes++;
+        toast(p + ' → 띄어쓰기', '띄어쓰기 교정', 'fix');
+      }
+    }
+    tokens.push(ch); metas.push({ id, fx, fy, ok: false });
+    if (raw !== id) { S.stats.fixes++; toast(raw + ' → ' + id, '바꿨어요', 'fix'); }
+    if (S.fixOn) endCheck();
+    render(); save();
+  }
+  function typeChar(ch, keyId, fx, fy) {
+    keyId = keyId || (ch === ' ' ? 'SPACE' : ch === '\n' ? 'ENTER' : ch);
+    // 지우고 다시 친 경우: 띄어쓰기·문장부호 실수 배우기
+    if (delBuf.length && reIdx < delBuf.length && Date.now() - delT < 10000) {
+      const orig = delBuf[reIdx];
+      if (orig && orig.sp && orig.id !== keyId && SP_LEARN.has(keyId)) {
+        S.spConf[orig.id + '>' + keyId] = (S.spConf[orig.id + '>' + keyId] || 0) + 1;
+        S.stats.learned++;
+        const nm = id => id === 'SPACE' ? '띄어쓰기' : id === 'ENTER' ? '줄바꿈' : id;
+        toast(nm(orig.id) + ' → ' + nm(keyId), '배웠어요', 'learn');
+      }
+    }
+    confirmPrev();
+    lastAuto = null;
+    if (delBuf.length) { reIdx++; if (reIdx >= delBuf.length) clearDel(); }
+    finalizeWord();
+    tokens.push(ch); metas.push({ id: keyId, fx, fy, ok: true, sp: true });
+    render(); save();
+  }
+  function backspace() {
+    if (!tokens.length) return;
+    // 자동 어미 교정 직후 ⌫ → 원래대로 되돌리고 이 조합은 다시 안 고침
+    if (lastAuto && tokens.length === lastAuto.idx + 2) {
+      tokens[lastAuto.idx] = lastAuto.orig;
+      if (metas[lastAuto.idx]) metas[lastAuto.idx].id = lastAuto.orig;
+      S.endNo[lastAuto.key] = true; S.endFix = Math.max(0, S.endFix - 1);
+      toast('되돌렸어요', '이 조합은 다시 안 고칠게요', 'learn');
+      lastAuto = null; render(); save(); return;
+    }
+    lastAuto = null;
+    tokens.pop(); const m = metas.pop();
+    wordEv = wordEv.filter(e => e.i < tokens.length);
+    if (reIdx > 0) clearDel();          // 다시 치다가 또 지우면 새로 시작
+    delBuf.unshift(m);                  // 원래 순서 유지
+    if (delBuf.length > 12) delBuf.pop();
+    delT = Date.now();
+    render();
+  }
+  function setShift(v) {
+    shift = v;
+    keyMap.SHIFT.el.classList.toggle('on', v);
+    for (const id in SHIFTMAP) keyMap[id].el.firstChild.nodeValue = v ? SHIFTMAP[id] : id;
+  }
+
+  let rep = null, repT = null;
+  function stopRepeat() { clearTimeout(repT); clearInterval(rep); repT = rep = null; }
+
+  // 키 누름 표시(풍선), 진동
+  const pop = document.createElement('div'); pop.className = 'pop'; kb.appendChild(pop);
+  const hapt = document.getElementById('hapt');
+  const pressed = new Map();   // 손가락 id -> key
+  function buzz() {
+    try { if (navigator.vibrate) { navigator.vibrate(5); return; } } catch (err) {}
+    if (!ROOT.hapt) return;
+    setTimeout(() => { try { hapt.click(); } catch (err) {} }, 0);   // 아이폰(iOS 18+) 진동, 입력 처리 뒤에
+  }
+  function release(fid) {
+    const ent = pressed.get(fid); if (!ent) return;
+    pressed.delete(fid);
+    const k = ent.k;
+    if (ent.commit) ent.commit();          // 손 뗀 순서대로 입력
+    k.el.classList.remove('down');
+    if (pop.dataset.id === k.id) pop.classList.remove('show');
+    if (k.id === 'BS') stopRepeat();
+  }
+  function press(cx, cy, fid) {
+    // 누를 때마다 자판 위치를 새로 확인 (화면이 밀려도 정확하게)
+    const kr = kb.getBoundingClientRect();
+    if (Math.abs(kr.width - kbW) > 1 || Math.abs(kr.height - kbH) > 1) measure();
+    kbL = kr.left; kbT = kr.top;
+    const x = cx - kbL, y = cy - kbT;
+    const { key, raw } = pick(x, y);
+    const k = keyMap[key];
+    k.el.classList.add('down');
+    // 오래 안 떨어진 입력(신호 누락)은 먼저 처리
+    const now = performance.now();
+    for (const [f, ent] of [...pressed]) if (ent.commit && now - ent.t > 1500) release(f);
+    if (k.letter) {
+      pop.textContent = (shift && SHIFTMAP[key]) || key; pop.dataset.id = key;
+      pop.style.left = k.cx + 'px'; pop.style.top = (k.y - 60) + 'px';
+      pop.classList.add('show');
+    }
+    diagTap(x, y, key, raw);
+    let commit = null;
+    if (k.letter) { const fx = x / kbW, fy = y / kbH; commit = () => typeLetter(key, fx, fy, raw); }
+    else if (key === 'BS') { backspace(); stopRepeat(); repT = setTimeout(() => { rep = setInterval(backspace, 70); }, 420); }
+    else if (key === 'SHIFT') setShift(!shift);
+    else { const fx = x / kbW, fy = y / kbH; commit = () => typeChar(chOfSp(key), key, fx, fy); }
+    pressed.set(fid, { k, commit, t: now });
+    buzz();
+  }
+  // 같은 터치가 두 경로(pointer, touch)로 들어와도 한 번만 입력
+  const recent = [];
+  function tryPress(cx, cy, fid) {
+    const now = performance.now();
+    while (recent.length && now - recent[0].t > 150) recent.shift();
+    const path = fid[0];   // 'p' 또는 't'
+    // 같은 손가락이 다른 경로로 한 번 더 들어온 것만 무시 (같은 키 연타는 그대로 입력)
+    for (let i = 0; i < recent.length; i++) {
+      const r = recent[i];
+      if (r.path !== path && now - r.t < 80 && Math.hypot(r.x - cx, r.y - cy) < 12) { recent.splice(i, 1); return; }
+    }
+    recent.push({ x: cx, y: cy, t: now, path });
+    press(cx, cy, fid);
+  }
+  // 터치: 두 엄지가 겹치거나 동시에 닿아도 손가락마다 각각 처리
+  kb.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (ROOT.diag) { D.touches += e.changedTouches.length; const lag = performance.now() - e.timeStamp; if (lag > 0 && lag < 5000) D.lag = Math.max(D.lag, Math.round(lag)); }
+    for (const t of e.changedTouches) tryPress(t.clientX, t.clientY, 't' + t.identifier);
+  }, { passive: false });
+  ['touchend', 'touchcancel'].forEach(ev => kb.addEventListener(ev, e => {
+    e.preventDefault();
+    if (ROOT.diag && ev === 'touchcancel') { D.cancel += e.changedTouches.length; diagShow(); }
+    for (const t of e.changedTouches) release('t' + t.identifier);
+  }, { passive: false }));
+  // 마우스·펜 (PC)
+  // 포인터 경로도 같이 받아서, 어느 한쪽이 씹혀도 입력되게
+  kb.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    tryPress(e.clientX, e.clientY, 'p' + e.pointerId);
+  });
+  ['pointerup', 'pointercancel'].forEach(ev => window.addEventListener(ev, e => release('p' + e.pointerId)));
+  window.addEventListener('blur', () => { stopRepeat(); for (const fid of [...pressed.keys()]) release(fid); });
+
+  // ---------- 진단 모드 ----------
+  const diagEl = document.getElementById('diag');
+  const D = { touches: 0, inputs: 0, fixed: 0, cancel: 0, outside: 0, lag: 0, last: '' };
+  const marks = [];
+  function addMark(x, y, cls, label) {
+    const m = document.createElement('i'); m.className = 'mark ' + cls;
+    m.style.left = x + 'px'; m.style.top = y + 'px'; m.textContent = label || '';
+    kb.appendChild(m); marks.push(m);
+    if (marks.length > 40) marks.shift().remove();
+  }
+  function diagTap(x, y, key, raw) {
+    if (!ROOT.diag) return;
+    D.inputs++;
+    const L = { SHIFT: '⇧', BS: '⌫', SPACE: '␣', ENTER: '⏎' };
+    const show = id => L[id] || id;
+    if (key !== raw) D.fixed++;
+    addMark(x, y, key === raw ? 'ok' : 'fix', show(key).slice(0, 1));
+    D.last = '마지막: 손가락은 ' + show(raw) + ' 위 → 입력된 건 ' + show(key) + (key !== raw ? ' (교정됨)' : '');
+    diagShow();
+  }
+  function diagShow() {
+    if (!ROOT.diag) { diagEl.hidden = true; return; }
+    diagEl.hidden = false;
+    const miss = Math.max(0, D.touches - D.inputs);
+    diagEl.textContent = '터치 ' + D.touches + '번 / 입력 ' + D.inputs + '번 / 놓침 ' + miss + ' / 취소 ' + D.cancel +
+      ' / 자판 밖 ' + D.outside + ' / 교정 ' + D.fixed + ' / 최대 지연 ' + D.lag + 'ms\n' + (D.last || '모음을 천천히 10번씩 눌러보세요');
+  }
+  function diagReset() {
+    Object.assign(D, { touches: 0, inputs: 0, fixed: 0, cancel: 0, outside: 0, lag: 0, last: '' });
+    while (marks.length) marks.shift().remove();
+    diagShow();
+  }
+  // 자판 바로 위·옆을 눌러서 아무 키도 안 눌린 경우
+  document.addEventListener('touchstart', e => {
+    if (!ROOT.diag) return;
+    for (const t of e.changedTouches) {
+      if (t.target.closest && t.target.closest('#kb, #panel, button, label')) continue;
+      const kr = kb.getBoundingClientRect();
+      if (t.clientY > kr.top - 50 && t.clientY < kr.top) {
+        D.outside++;
+        addMark(t.clientX - kr.left, 4, 'out', '×');
+        D.last = '마지막: 자판 위쪽 바깥을 눌러서 입력 안 됨';
+        diagShow();
+      }
+    }
+  }, { passive: true });
+
+  // ---------- 화면 ----------
+  const phEl = document.createElement('span'); phEl.className = 'ph';
+  phEl.textContent = '여기서 쳐보세요. 틀리면 자판의 ⌫로 지우고 다시 치면 그 실수를 배워요.';
+  const txtNode = document.createTextNode('');
+  const curEl = document.createElement('span'); curEl.className = 'cursor';
+  editor.append(phEl, txtNode, curEl);
+  const countEl = document.getElementById('count');
+  let rafId = 0, typingT = null, lastCount = null;
+  function render() {
+    if (rafId) return;
+    rafId = requestAnimationFrame(() => {
+      rafId = 0;
+      const text = assemble(tokens);
+      txtNode.data = text;
+      phEl.style.display = text ? 'none' : '';
+      editor.scrollTop = editor.scrollHeight;
+      const cnt = S.stats.fixes ? '자동 교정 ' + S.stats.fixes + '회' : '';
+      if (cnt !== lastCount) { countEl.textContent = cnt; lastCount = cnt; }
+    });
+    editor.classList.add('typing');
+    clearTimeout(typingT); typingT = setTimeout(() => editor.classList.remove('typing'), 600);
+  }
+
+  let toastT = null;
+  function toast(big, small, kind) {
+    toastEl.querySelector('b').textContent = big;
+    toastEl.querySelector('span').textContent = small;
+    toastEl.className = 'toast show ' + (kind || '');
+    toastEl.style.bottom = (window.innerHeight - kbT + 70) + 'px';
+    clearTimeout(toastT);
+    toastT = setTimeout(() => { toastEl.className = 'toast ' + (kind || ''); }, 1100);
+  }
+
+  function drawDots() {
+    kb.classList.toggle('dots', !!S.dots);
+    keys.forEach(k => {
+      if (!k.dot) return;
+      const o = effOff(k), raw = S.off[k.id];
+      k.dot.classList.toggle('has', !!((raw && raw.n >= 3) || S.side[sideOf(k)].n >= 10));
+      k.dot.style.left = (50 + o.dx * 100) + '%';
+      k.dot.style.top = (50 + o.dy * 100) + '%';
+    });
+  }
+
+  // ---------- 버튼 ----------
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    finalizeWord(); save();
+    const text = assemble(tokens);
+    if (!text) { toast('비어 있어요', '먼저 문장을 쳐주세요', ''); return; }
+    try { await navigator.clipboard.writeText(text); }
+    catch (e) {
+      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand('copy'); } catch (err) {} ta.remove();
+    }
+    toast('복사했어요', '카톡에 붙여넣으세요', '');
+  });
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    confirmPrev(); finalizeWord(); tokens = []; metas = []; clearDel(); render(); save();
+  });
+
+  const panel = document.getElementById('panel');
+  const optFix = document.getElementById('optFix'), optDots = document.getElementById('optDots');
+  function openPanel() {
+    setSync(synced);
+    document.getElementById('nTaps').textContent = S.stats.taps;
+    document.getElementById('nLearn').textContent = S.stats.learned;
+    document.getElementById('nFix').textContent = S.stats.fixes;
+    const t = thumbType(), d = S.dir, tot = d.h + d.v;
+    const NAMES = { v: ['위아래형', '위아래 줄로 빗나가는 편이에요. 판정 영역을 세로로 넉넉하게 맞췄어요.'],
+                    h: ['양옆형', '옆 키로 빗나가는 편이에요. 판정 영역을 가로로 넉넉하게 맞췄어요.'],
+                    even: ['고른형', '위아래와 양옆을 비슷하게 틀려요. 키마다 쏠린 방향만 보정하고 있어요.'] };
+    const nm = t.type ? NAMES[t.type] : ['분석 중', '지우고 다시 친 실수가 20번쯤 쌓이면 엄지 타입을 알려드려요. (' + tot + '/20)'];
+    document.getElementById('typeName').textContent = nm[0];
+    document.getElementById('typeDesc').textContent = nm[1];
+    document.getElementById('barH').style.width = (tot ? d.h / tot * 100 : 50) + '%';
+    document.getElementById('barV').style.width = (tot ? d.v / tot * 100 : 50) + '%';
+    document.getElementById('labH').textContent = '양옆 ' + d.h + '회';
+    document.getElementById('labV').textContent = '위아래 ' + d.v + '회';
+    const desc = (sd, who) => {
+      if (sd.n < 10) return who + ' 엄지: 측정 중';
+      const h = Math.round(sd.dx * 100), v = Math.round(sd.dy * 100);
+      const hs = Math.abs(h) < 4 ? '' : (h > 0 ? '오른쪽 ' : '왼쪽 ') + Math.abs(h) + '%';
+      const vs = Math.abs(v) < 4 ? '' : (v > 0 ? '아래 ' : '위 ') + Math.abs(v) + '%';
+      return who + ' 엄지: ' + ((hs || vs) ? [hs, vs].filter(Boolean).join(', ') + ' 쏠림 → 맞춰서 보정 중' : '거의 정확');
+    };
+    document.getElementById('sideNote').textContent = desc(S.side.L, '왼손') + '\n' + desc(S.side.R, '오른손(모음)');
+    document.getElementById('sideNote').style.whiteSpace = 'pre-line';
+    const list = document.getElementById('pairs'); list.textContent = '';
+    // 자리별 요약
+    const cl = document.getElementById('cellList'); cl.textContent = '';
+    const posTot = { head: 0, mid: 0, end: 0 }, best = {};
+    for (const cell in S.cell) {
+      const [ps, pt] = cell.split('_');
+      for (const k in S.cell[cell]) {
+        const n = S.cell[cell][k]; posTot[ps] += n;
+        if (!best[ps] || n > best[ps].n) best[ps] = { n, k, pt };
+      }
+    }
+    const rowLi = (label, n, detail) => {
+      const li = document.createElement('li');
+      const sp = document.createElement('span'); sp.textContent = label + (detail ? ' · ' + detail : '');
+      const em = document.createElement('em'); em.textContent = n + '회';
+      li.append(sp, em); cl.appendChild(li);
+    };
+    ['head', 'mid', 'end'].forEach(ps => {
+      const b = best[ps];
+      rowLi(POS_NAME[ps], posTot[ps], b ? PART_NAME[b.pt] + ' ' + b.k.split('>')[1] + '→' + b.k.split('>')[0] + ' 자주' : '');
+    });
+    const spTop = Object.entries(S.spConf).sort((a, b) => b[1] - a[1])[0];
+    const spN = Object.values(S.spConf).reduce((a, b) => a + b, 0);
+    const spNm = id => id === 'SPACE' ? '띄어쓰기' : id === 'ENTER' ? '줄바꿈' : id;
+    rowLi('띄어쓰기·문장부호', spN, spTop ? spNm(spTop[0].split('>')[1]) + ' 치려다 ' + spNm(spTop[0].split('>')[0]) : '');
+    const top = Object.entries(S.conf).filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    if (!top.length) {
+      const li = document.createElement('li'); li.innerHTML = '<span>아직 배운 실수가 없어요</span>'; list.appendChild(li);
+    }
+    top.forEach(([pair, n]) => {
+      const [w, r] = pair.split('>');
+      const li = document.createElement('li');
+      const s = document.createElement('span'); s.textContent = r + '을(를) 치려다 ' + w;
+      const em = document.createElement('em'); em.textContent = n + '회';
+      li.append(s, em); list.appendChild(li);
+    });
+    document.getElementById('statTitle').textContent = '학습 현황';
+    optFix.checked = S.fixOn; optDots.checked = S.dots;
+    document.getElementById('optDiag').checked = !!ROOT.diag;
+    document.getElementById('optHapt').checked = !!ROOT.hapt;
+    panel.classList.add('open');
+  }
+  document.getElementById('statsBtn').addEventListener('click', openPanel);
+  document.getElementById('closeBtn').addEventListener('click', () => panel.classList.remove('open'));
+  panel.addEventListener('click', e => { if (e.target === panel) panel.classList.remove('open'); });
+  optFix.addEventListener('change', () => { S.fixOn = optFix.checked; save(); });
+  optDots.addEventListener('change', () => { S.dots = optDots.checked; drawDots(); save(); });
+  document.getElementById('optDiag').addEventListener('change', e => { ROOT.diag = e.target.checked; diagReset(); save(); setTimeout(measure, 50); });
+  document.getElementById('optHapt').addEventListener('change', e => { ROOT.hapt = e.target.checked; save(); });
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (!confirm('지금까지 배운 엄지 습관을 모두 지울까요?')) return;
+    S.off = {}; S.conf = {}; S.stats = { taps: 0, learned: 0, fixes: 0 }; S.spread = { vx: 0.06, vy: 0.06, n: 0 }; S.dir = { h: 0, v: 0 }; S.cell = {}; S.spConf = {}; S.endNo = {}; S.endFix = 0; S.side = { L: { dx: 0, dy: 0, n: 0 }, R: { dx: 0, dy: 0, n: 0 } };
+    save(); drawDots(); openPanel(); render();
+  });
+  // ---------- PC 키보드 (두벌식 배열) ----------
+  const CODEMAP = {KeyQ:'ㅂ',KeyW:'ㅈ',KeyE:'ㄷ',KeyR:'ㄱ',KeyT:'ㅅ',KeyY:'ㅛ',KeyU:'ㅕ',KeyI:'ㅑ',KeyO:'ㅐ',KeyP:'ㅔ',
+    KeyA:'ㅁ',KeyS:'ㄴ',KeyD:'ㅇ',KeyF:'ㄹ',KeyG:'ㅎ',KeyH:'ㅗ',KeyJ:'ㅓ',KeyK:'ㅏ',KeyL:'ㅣ',
+    KeyZ:'ㅋ',KeyX:'ㅌ',KeyC:'ㅊ',KeyV:'ㅍ',KeyB:'ㅠ',KeyN:'ㅜ',KeyM:'ㅡ'};
+  window.addEventListener('keydown', e => {
+    if (panel.classList.contains('open') || e.metaKey || e.ctrlKey || e.altKey) return;
+    const c = e.code;
+    if (c === 'Backspace') { e.preventDefault(); backspace(); return; }
+    if (c === 'Enter') { e.preventDefault(); typeChar('\n'); return; }
+    if (c === 'Space') { e.preventDefault(); typeChar(' '); return; }
+    if (c === 'Comma') { e.preventDefault(); typeChar(','); return; }
+    if (c === 'Period') { e.preventDefault(); typeChar('.'); return; }
+    if (c === 'Slash' && e.shiftKey) { e.preventDefault(); typeChar('?'); return; }
+    const id = CODEMAP[c];
+    if (!id) return;
+    e.preventDefault();
+    if (e.shiftKey && SHIFTMAP[id]) setShift(true);
+    typeLetter(id, null, null, id);
+  });
+
+  window.addEventListener('resize', layout);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', measure);
+  if (window.ResizeObserver) new ResizeObserver(measure).observe(kb);
+  window.addEventListener('orientationchange', () => setTimeout(layout, 200));
+  // 확대 막기: 두 손가락 확대, 두 번 탭 확대
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  let lastTouch = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if (now - lastTouch < 350 && !e.target.closest('button, input, label, #kb')) e.preventDefault();
+    lastTouch = now;
+  }, { passive: false });
+  document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+
+  layout(); render(); diagShow();
+  if (migrated) setTimeout(() => toast('새로 시작', '새 버전이라 학습 기록을 처음부터 다시 쌓아요', 'learn'), 400);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+})();
+</script>
+</body>
+</html>

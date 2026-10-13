@@ -83,6 +83,24 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         super.viewWillAppear(animated)
         kv.applyTheme(ThemeStore.current())   // 앱에서 고른 테마
         autoCap()
+        // 앱에서 '데이터 초기화'를 눌렀으면 여기서 엄지 기록을 처음부터
+        let rs = ThemeStore.resetStamp()
+        if rs > UserDefaults.standard.double(forKey: "fe.resetDone") {
+            learner.reset()
+            UserDefaults.standard.set(rs, forKey: "fe.resetDone")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                self?.kv.showToast("기록을 비웠어요", "팻핑이가 처음부터 다시 배울게요")
+            }
+        }
+        // 예전부터 쌓인 기록이 이미 100개를 넘었으면 키보드를 열 때 바로 리포트를 올림
+        if let r = learner.publishReportIfDue() {
+            learner.saveNow()
+            if !ThemeStore.bool("fe.toastOff") {
+                let t = Anniversary.reportText(r)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.kv.showToast(t.0, t.1) }
+            }
+        }
+        updateMenuStatus()
         // 날짜 기념일 (만난 지 22·100일 …): 그날 키보드를 처음 열 때 한 번
         if let d = learner.newDayMilestone() {
             learner.saveSoon()
@@ -114,6 +132,12 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private func countFix(english: Bool) {
         learner.countFix(english: english)
         checkCountMilestone()
+        updateMenuStatus()
+    }
+
+    private func updateMenuStatus() {
+        let n = learner.totalFixes
+        kv.menuStatus = "고친 오타 \(n) · 다음 리포트 \((n / 100 + 1) * 100)"
     }
 
     override func viewWillDisappear(_ animated: Bool) {
