@@ -79,11 +79,11 @@ final class Learner {
     }()
     static func today() -> String { dayFmt.string(from: Date()) }
 
-    private func bumpDay(_ slot: Int) {
+    private func bumpDay(_ slot: Int, by: Int = 1) {
         var d = data.daily ?? [:]
         let k = Learner.today()
         var row = d[k] ?? [0, 0, 0, 0]
-        row[slot] += 1
+        row[slot] = max(0, row[slot] + by)
         d[k] = row
         if d.count > 70 { for old in d.keys.sorted().prefix(d.count - 70) { d.removeValue(forKey: old) } }
         data.daily = d
@@ -97,6 +97,12 @@ final class Learner {
     func countFix(english: Bool) {
         if english { data.fixesEn = (data.fixesEn ?? 0) + 1 } else { data.fixes += 1 }
         bumpDay(english ? 3 : 1)
+    }
+
+    /// 키보드가 고쳤는데 사용자가 바로 되돌림 → 잘못 고친 것이라 숫자에서 뺌
+    func uncountFix(english: Bool) {
+        if english { data.fixesEn = max(0, (data.fixesEn ?? 0) - 1) } else { data.fixes = max(0, data.fixes - 1) }
+        bumpDay(english ? 3 : 1, by: -1)
     }
 
     var totalFixes: Int { data.fixes + (data.fixesEn ?? 0) }

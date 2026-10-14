@@ -6,6 +6,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         let fx: CGFloat
         let fy: CGFloat
         var ok: Bool
+        var raw: String = ""   // 손가락이 실제로 닿은 키 (키보드가 바꿨으면 id와 다름)
     }
 
     private let learner = Learner()
@@ -21,6 +22,9 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private var repeatTimer: Timer?
     private var composing = false
     private var lastAuto: (idx: Int, orig: String, key: String)? = nil
+    /// 어미 교정한 단어를 끝까지 지켜봄: 단어가 "요+조사"로 끝나면 이름이었던 것 → 되돌림 (가료를 · 가료야)
+    private var endWatch: (idx: Int, orig: String, key: String)? = nil
+    private static let particles: Set<String> = ["를", "는", "가", "야", "랑", "도", "한테", "한테서", "님", "씨", "의", "에", "에게", "에서", "와", "만", "께", "까지", "부터", "처럼", "보다", "하고", "라도"]
 
     // MARK: - 어미 교정 (밥먹었어료 → 밥먹었어요)
     private static let endPrev: Set<String> = Set("어아에세네해여워와예래게데줘봐돼써가거서져려대케레셔쳐펴혀까떠냐니지시".map { String($0) })
@@ -43,11 +47,14 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         let c = tokens[n - 2]
         guard Hangul.isConsonant(c), c != "ㅇ" else { return }
         guard let p = prevSyllable(Array(tokens[0..<(n - 2)])), KeyboardViewController.endPrev.contains(p) else { return }
-        if learner.endNo[p + c] == true { return }
+        // 예외는 단어 통째로 기억 (가료만 빼고, 먹었어료→먹었어요 같은 교정은 그대로)
+        let key = "W:" + Hangul.assemble(Array(tokens[0..<(n - 2)])) + c
+        if learner.endNo[key] == true { return }
         let learned = (learner.endConf["\(c)>ㅇ"] ?? 0) >= 2
         guard KeyboardViewController.endBase.contains(c) || (learned && adjacent(c, "ㅇ")) else { return }
         tokens[n - 2] = "ㅇ"
-        lastAuto = (n - 2, c, p + c)
+        lastAuto = (n - 2, c, key)
+        endWatch = (n - 2, c, key)
         countFix(english: false)
     }
 
@@ -163,6 +170,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
                 kv.shift.toggle()
             }
         case "LANG":
+            endWordCheck()
             commitComposition()
             let toEnglish = !(kv.page == .english || (kv.page != .hangul && kv.letterPage == .english))
             kv.shift = false
@@ -172,6 +180,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             autoCap()
         case "LANG_HOLD":
             // 한/A 꾹: 다른 키보드(아이폰 기본 키보드 등)로 바꾸기
+            endWordCheck()
             commitComposition()
             advanceToNextInputMode()
         case "BACK": backspace(); autoCap(); startRepeat()
@@ -228,7 +237,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         lastAuto = nil
         textDocumentProxy.insertText(ch)
         lastEditAt = Date()
-        pushHistory(TapMeta(id: id, fx: p.x, fy: p.y, ok: false))
+        pushHistory(TapMeta(id: id, fx: p.x, fy: p.y, ok: false, raw: raw))
         if raw != id { countFix(english: true) }
         learner.saveSoon()
     }
@@ -236,11 +245,19 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     /// 지우고 다시 친 경우: 같은 자리끼리 비교해서 배움 (한글·영어 공통)
     private func retypeLearn(_ id: String) {
         if !delBuf.isEmpty && reIdx < delBuf.count && Date().timeIntervalSince(delT) < 10 {
+            // 키보드가 바꿔 준 글자를 지우고 원래 눌린 키를 다시 침 → 잘못 고친 것, 숫자에서 뺌
+            if let orig = delBuf[reIdx], !orig.raw.isEmpty, orig.raw != orig.id, id == orig.raw {
+                learner.uncountFix(english: KeyboardView.en2ko[orig.id] != nil)
+                updateMenuStatus()
+            }
             if let orig = delBuf[reIdx], orig.id != id, adjacent(orig.id, id), id == "ㅇ", isEndSlot() {
                 // 어미 자리 실수는 따로 저장 (라면·타요의 ㄹ·ㅌ은 건드리지 않게)
                 var ec = learner.endConf
                 ec["\(orig.id)>\(id)", default: 0] += 1
                 learner.endConf = ec
+                // 예외로 기억했던 단어인데 사용자가 직접 '요'로 고침 → 예외 취소 (가료 예외 때문에 '가요'를 못 고치는 일 방지)
+                var no = learner.endNo
+                if no.removeValue(forKey: "W:" + Hangul.assemble(tokens) + orig.id) != nil { learner.endNo = no }
                 learner.data.learned += 1
             } else if let orig = delBuf[reIdx], orig.id != id, adjacent(orig.id, id) {
                 learnAt(id, orig.fx, orig.fy, 0.12)
@@ -270,14 +287,31 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         tokens.append(ch)
         if learner.data.fixOn { endCheck() }
         applyTokens()
-        pushHistory(TapMeta(id: id, fx: p.x, fy: p.y, ok: false))
+        pushHistory(TapMeta(id: id, fx: p.x, fy: p.y, ok: false, raw: raw))
         if raw != id { countFix(english: false) }
         learner.saveSoon()
     }
 
     /// 스페이스 두 번 빠르게 → ". " (아이폰 기본 키보드의 마침표 단축키)
     private var lastSpaceAt = Date.distantPast
+    /// 단어가 끝날 때: "요" 뒤에 조사만 붙었으면 어미가 아니라 이름 → 원래대로 (가요를 → 가료를)
+    private func endWordCheck() {
+        guard let w = endWatch else { return }
+        endWatch = nil
+        guard tokens.count > w.idx + 2, tokens[w.idx] == "ㅇ" else { return }
+        let after = Hangul.assemble(Array(tokens[(w.idx + 2)...]))
+        guard KeyboardViewController.particles.contains(after) else { return }
+        tokens[w.idx] = w.orig
+        applyTokens()
+        var no = learner.endNo
+        no[w.key] = true
+        learner.endNo = no
+        learner.uncountFix(english: false)
+        updateMenuStatus()
+    }
+
     private func typeSpace() {
+        endWordCheck()
         commitComposition()
         let before = textDocumentProxy.documentContextBeforeInput ?? ""
         if Date().timeIntervalSince(lastSpaceAt) < 0.6, before.hasSuffix(" "),
@@ -292,6 +326,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     }
 
     private func typeChar(_ s: String) {
+        endWordCheck()
         confirmPrev()
         lastAuto = nil
         if !delBuf.isEmpty {
@@ -327,6 +362,9 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             var no = learner.endNo
             no[la.key] = true
             learner.endNo = no
+            learner.uncountFix(english: false)   // 되돌린 어미 교정은 숫자에서 뺌 (갤럭시와 같게)
+            endWatch = nil
+            updateMenuStatus()
             lastAuto = nil
             applyTokens()
             return
@@ -334,6 +372,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         lastAuto = nil
         checkExternalChange()   // 화면엔 '다'만 있는데 옛 단어(습니다)를 지우는 일 방지
 
+        if let w = endWatch, tokens.count <= w.idx + 2 { endWatch = nil }   // 교정한 글자까지 지우면 지켜보기 끝
         if !tokens.isEmpty {
             let before = Hangul.assemble(tokens)
             if wholeSyllable {
@@ -386,6 +425,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
             if !keep.isEmpty {
                 tokens = keep
                 lastAuto = nil
+                endWatch = nil
                 shown = kept
             }
         }
@@ -394,6 +434,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
 
     private func commitComposition() {
         wholeSyllable = false
+        endWatch = nil
         tokens = []
         shown = ""
     }
