@@ -1,0 +1,73 @@
+name: Build IPA
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild -version
+          xcodebuild -project FingerError.xcodeproj -scheme FingerError \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee build.log
+        continue-on-error: false
+
+      - name: Show errors
+        if: failure()
+        run: |
+          echo "===== ERRORS ====="
+          grep -E "error:|fatal|cannot|not found" build.log | sort -u | head -40 || true
+          # Summary 화면 Annotations 에 에러를 바로 보이게
+          grep -E "error:" build.log | sort -u | head -10 | while IFS= read -r line; do
+            echo "::error::${line}"
+          done
+          if ! grep -q "error:" build.log; then tail -40 build.log | while IFS= read -r line; do echo "::error::${line}"; done; fi
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/FingerError.app Payload/
+          # 앱과 키보드가 테마 설정을 공유하도록 권한(앱 그룹) 표시 → 설치 도구가 이걸 보고 서명
+          codesign -f -s - --entitlements Keyboard/FingerErrorKeyboard.entitlements Payload/FingerError.app/PlugIns/FingerErrorKeyboard.appex
+          codesign -f -s - --entitlements App/FingerError.entitlements Payload/FingerError.app
+          ls Payload/FingerError.app/PlugIns
+          zip -qry FingerError.ipa Payload
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: FingerError-ipa
+          path: FingerError.ipa
+
+      # 폰·PC에서 바로 받을 수 있는 고정 링크
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: 핑거에러 iOS 최신 버전
+          files: FingerError.ipa
+          make_latest: true
