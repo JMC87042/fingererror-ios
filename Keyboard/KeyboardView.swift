@@ -16,6 +16,8 @@ final class KeyCap: UIView {
     private let ring = CAShapeLayer()
     /// 가죽 박음질 점선
     private let stitchLayer = CAShapeLayer()
+    /// 금속 엔터 빛 띠
+    private let metalLayer = CAGradientLayer()
     /// 투명 젤리 물방울 반사광
     private let drop = UIView()
     /// 계절 스티커 (키 모서리에 살짝 걸침, 누르는 영역과 무관)
@@ -54,6 +56,14 @@ final class KeyCap: UIView {
         stitchLayer.lineWidth = 1.1
         stitchLayer.lineDashPattern = [3.5, 2.5]
         face.layer.insertSublayer(stitchLayer, above: ring)
+        metalLayer.startPoint = CGPoint(x: 0, y: 0)
+        metalLayer.endPoint = CGPoint(x: 1, y: 1)
+        metalLayer.colors = [UIColor(red: 1, green: 0.96, blue: 0.82, alpha: 0.67).cgColor, UIColor(white: 1, alpha: 0).cgColor,
+                             UIColor(red: 0.35, green: 0.2, blue: 0, alpha: 0.31).cgColor, UIColor(red: 1, green: 0.93, blue: 0.67, alpha: 0.59).cgColor,
+                             UIColor(red: 0.31, green: 0.16, blue: 0, alpha: 0.27).cgColor]
+        metalLayer.locations = [0, 0.32, 0.52, 0.72, 1]
+        metalLayer.isHidden = true
+        face.layer.insertSublayer(metalLayer, above: stitchLayer)
         drop.isUserInteractionEnabled = false
         drop.backgroundColor = UIColor(white: 1, alpha: 0.75)
         drop.isHidden = true
@@ -153,6 +163,8 @@ final class KeyCap: UIView {
         grad.cornerRadius = cr
         ring.frame = face.bounds
         stitchLayer.frame = face.bounds
+        metalLayer.frame = face.bounds
+        metalLayer.cornerRadius = face.layer.cornerRadius
         stitchLayer.path = UIBezierPath(roundedRect: face.bounds.insetBy(dx: 3.5, dy: 3.5), cornerRadius: 6).cgPath
         ring.path = theme.cap == "round" ? UIBezierPath(roundedRect: face.bounds.insetBy(dx: 2.5, dy: 2.5), cornerRadius: max(cr - 2.5, 0)).cgPath : nil
         CATransaction.commit()
@@ -223,6 +235,7 @@ final class KeyCap: UIView {
         body.isHidden = true
         stitchLayer.isHidden = t.stitch == nil || isSpecial || isAccent
         stitchLayer.strokeColor = t.stitch?.cgColor
+        metalLayer.isHidden = !(t.metal && isAccent)
         if t.jelly {
             // 3D 키캡: 아랫단은 윗면보다 진하게, 윗면은 위가 밝은 그라데이션, 바닥에 은은한 그림자
             let top = (face.backgroundColor ?? t.key).resolvedColor(with: traitCollection)

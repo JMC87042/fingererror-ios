@@ -29,6 +29,7 @@ struct KBTheme {
     var jelly: Bool = true            // 3D 키캡 (아래 cap 모양으로 그림)
     var cap: String = "jelly"         // 키캡 모양: jelly 젤리 · round 동글 타자기 · clear 투명 젤리 · clay 클레이 · sa 레트로 기계식
     var stitch: UIColor? = nil        // 가죽 박음질 색 (글자 키 안쪽 점선)
+    var metal: Bool = false           // 엔터 키를 금속처럼 반짝이게
     var group: String = "color"       // color: 컬러 · retro: 레트로 (둘 다 키캡 모양 고르기) · winter: 겨울 (기계식 고정)
 
     var menuName: String { short ?? name }
@@ -46,7 +47,7 @@ struct KBTheme {
         bg: c(40, 30, 80), key: c(36, 32, 56), special: c(112, 82, 204),
         pressKey: c(56, 50, 84), pressSpecial: c(96, 68, 184),
         text: c(226, 218, 255), specialText: .white,
-        accent: c(196, 152, 64), depth: 4, radius: 10, bgImage: "bg_kit")
+        accent: c(222, 172, 66), depth: 4, radius: 10, bgImage: "bg_kit", metal: true)
 
     static let all: [KBTheme] = [
         standard,
