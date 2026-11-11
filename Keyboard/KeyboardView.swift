@@ -803,7 +803,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         menuTouch = oid
         let space = keys.first(where: { $0.id == "SPACE" })?.frame ?? CGRect(x: 0, y: bounds.height - 50, width: bounds.width, height: 46)
         menu.frame = bounds
-        menu.show(current: theme.id, tab: theme.group, above: space, status: menuStatus)
+        menu.show(current: theme.id, tab: String(KBTheme.pageOf(theme.id)), above: space, status: menuStatus)
         addSubview(menu)
     }
 
@@ -823,7 +823,6 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
             let ids = KBTheme.caps.map { $0.id }
             let i = ids.firstIndex(of: ThemeStore.capId()) ?? 0
             ThemeStore.saveCap(ids[(i + 1) % ids.count])
-            if !KBTheme.capped(theme) { ThemeStore.save(KBTheme.colors[0].id) }
             applyTheme(KBTheme.find(ThemeStore.currentId()))
             menu.setCurrent(theme.id)
             return
@@ -961,7 +960,7 @@ final class ThemeMenuView: UIView {
         status.clipsToBounds = true
         panel.addSubview(status)
         // [컬러] [겨울 레트로] 탭 + '키캡: 젤리 ▾'
-        for (l, txt) in [(tabColor, "컬러"), (tabRetro, "레트로"), (tabWinter, "겨울"), (capBtn, "")] {
+        for (l, txt) in [(tabColor, "1"), (tabRetro, "2"), (tabWinter, "3"), (capBtn, "")] {
             l.text = txt
             l.font = ThemeFont.ui(12.5)
             l.textAlignment = .center
@@ -977,14 +976,14 @@ final class ThemeMenuView: UIView {
     private let tabRetro = UILabel()
     private let tabWinter = UILabel()
     private let capBtn = UILabel()
-    private var tab = "color"
+    private var tab = "0"
 
     /// 지금 탭의 테마 미리보기 칸 만들기
     private func buildChips() {
         for c in chips { c.box.removeFromSuperview(); c.name.removeFromSuperview() }
         chips = []
         let cap = ThemeStore.capId()
-        for t in KBTheme.group(tab) {
+        for t in KBTheme.page(Int(tab) ?? 0) {
             let box = UIView()
             box.layer.cornerRadius = 7
             box.layer.borderWidth = 0
@@ -1047,19 +1046,21 @@ final class ThemeMenuView: UIView {
         let g: CGFloat = 6
         let cw = (panel.bounds.width - pad * 2 - g * CGFloat(cols - 1)) / CGFloat(cols)
         let ty: CGFloat = 32
-        tabColor.frame = CGRect(x: pad, y: ty, width: 48, height: 22)
-        tabRetro.frame = CGRect(x: tabColor.frame.maxX + 5, y: ty, width: 54, height: 22)
-        tabWinter.frame = CGRect(x: tabRetro.frame.maxX + 5, y: ty, width: 48, height: 22)
+        // 테마 장 넘기기 [1] [2] [3]
+        tabColor.frame = CGRect(x: pad, y: ty, width: 34, height: 22)
+        tabRetro.frame = CGRect(x: tabColor.frame.maxX + 5, y: ty, width: 34, height: 22)
+        tabWinter.frame = CGRect(x: tabRetro.frame.maxX + 5, y: ty, width: 34, height: 22)
+        let np = KBTheme.pages.count
+        tabRetro.isHidden = np < 2
+        tabWinter.isHidden = np < 3
         capBtn.frame = CGRect(x: panel.bounds.width - pad - 112, y: ty, width: 112, height: 22)
         let peach = UIColor(red: 1, green: 160 / 255, blue: 132 / 255, alpha: 1)
         let off = UIColor(red: 238 / 255, green: 234 / 255, blue: 230 / 255, alpha: 1)
-        tabColor.backgroundColor = tab == "color" ? peach : off
-        tabColor.textColor = tab == "color" ? .white : UIColor(white: 0.35, alpha: 1)
-        tabRetro.backgroundColor = tab == "retro" ? peach : off
-        tabRetro.textColor = tab == "retro" ? .white : UIColor(white: 0.35, alpha: 1)
-        tabWinter.backgroundColor = tab == "winter" ? peach : off
-        tabWinter.textColor = tab == "winter" ? .white : UIColor(white: 0.35, alpha: 1)
-        capBtn.isHidden = tab == "winter"
+        for (l, k) in [(tabColor, "0"), (tabRetro, "1"), (tabWinter, "2")] {
+            l.backgroundColor = tab == k ? peach : off
+            l.textColor = tab == k ? .white : UIColor(white: 0.35, alpha: 1)
+        }
+        capBtn.isHidden = false
         capBtn.text = "키캡: " + KBTheme.capName(ThemeStore.capId()) + " ▾"
         capBtn.backgroundColor = UIColor(red: 1, green: 238 / 255, blue: 228 / 255, alpha: 1)
         capBtn.textColor = UIColor(red: 196 / 255, green: 90 / 255, blue: 64 / 255, alpha: 1)
@@ -1080,9 +1081,9 @@ final class ThemeMenuView: UIView {
     func item(at p: CGPoint) -> String? {
         let q = convert(p, to: panel)
         if status.frame.insetBy(dx: -4, dy: -4).contains(q) { return "REPORT" }
-        if tabColor.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:color" }
-        if tabRetro.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:retro" }
-        if tabWinter.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:winter" }
+        if tabColor.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:0" }
+        if !tabRetro.isHidden, tabRetro.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:1" }
+        if !tabWinter.isHidden, tabWinter.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:2" }
         if !capBtn.isHidden, capBtn.frame.insetBy(dx: -3, dy: -3).contains(q) { return "CAP" }
         for c in chips where c.box.frame.union(c.name.frame).insetBy(dx: -3, dy: -3).contains(q) { return c.id }
         return nil
