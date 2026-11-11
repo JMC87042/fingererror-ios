@@ -96,7 +96,7 @@ struct ContentView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                Text("버전 2026.11.11-4 (레트로 10색 · 키캡 5종) · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
+                Text("버전 2026.11.11-5 (로즈 골드 · 모노 흰 엔터) · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
             }
             .navigationTitle("핑거에러")
             // 3D 젤리: 크림 배경 + 복숭아 포인트
