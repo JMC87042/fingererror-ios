@@ -99,7 +99,7 @@ struct KBTheme {
                 bg: c(16, 18, 24), key: c(30, 30, 33), special: c(190, 18, 28),
                 pressKey: c(46, 46, 50), pressSpecial: c(160, 12, 22),
                 text: c(236, 236, 238), specialText: .white,
-                accent: c(214, 22, 32), depth: 4, radius: 10, bgImage: "bg_race", stitch: c(200, 30, 40)),
+                accent: c(214, 22, 32), depth: 4, radius: 10),
 
         // ---- 레트로 10색 (키캡 모양 고르기) ----
         KBTheme(id: "rt_rose", name: "블랙 & 로즈 골드",
