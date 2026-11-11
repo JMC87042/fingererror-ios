@@ -106,10 +106,10 @@ struct KBTheme {
 
         // ---- 레트로 10색 (키캡 모양 고르기) ----
         KBTheme(id: "rt_rose", name: "블랙 & 로즈 골드",
-                bg: c(22, 20, 22), key: c(44, 40, 42), special: c(204, 150, 132),
-                pressKey: c(60, 56, 58), pressSpecial: c(186, 134, 116),
-                text: c(232, 192, 172), specialText: c(44, 30, 28),
-                accent: c(220, 166, 146), depth: 4, radius: 10, short: "로즈 골드", group: "retro"),
+                bg: c(14, 12, 14), key: c(42, 38, 40), special: c(28, 25, 27),
+                pressKey: c(60, 55, 57), pressSpecial: c(46, 42, 44),
+                text: c(226, 176, 156), specialText: c(226, 176, 156),
+                depth: 4, radius: 10, short: "로즈 골드", group: "retro"),
         KBTheme(id: "rt_navy", name: "네이비 & 오렌지",
                 bg: c(36, 52, 92), key: c(246, 242, 232), special: c(72, 98, 156),
                 pressKey: c(231, 227, 218), pressSpecial: c(66, 90, 143),
