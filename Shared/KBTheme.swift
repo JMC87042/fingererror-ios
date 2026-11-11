@@ -55,7 +55,7 @@ struct KBTheme {
                 bg: c(30, 40, 110), key: c(250, 248, 244), special: c(170, 20, 72),
                 pressKey: c(232, 228, 222), pressSpecial: c(150, 14, 60),
                 text: c(0, 62, 146), specialText: .white,
-                accent: c(200, 156, 60), depth: 4, radius: 10, bgImage: "bg_stripe"),
+                accent: c(222, 172, 66), depth: 4, radius: 10, bgImage: "bg_stripe", metal: true),
         KBTheme(id: "race", name: "레이싱 레드",
                 bg: c(16, 18, 24), key: c(30, 30, 33), special: c(190, 18, 28),
                 pressKey: c(46, 46, 50), pressSpecial: c(160, 12, 22),
