@@ -77,11 +77,6 @@ struct KBTheme {
                 pressKey: c(92, 92, 98), pressSpecial: c(70, 70, 76),
                 text: c(246, 246, 242), specialText: c(246, 246, 242),
                 depth: 4, radius: 10, short: "블랙"),
-        KBTheme(id: "burgundy", name: "버건디 & 그레이",
-                bg: c(48, 48, 54), key: c(214, 214, 218), special: c(118, 26, 44),
-                pressKey: c(196, 196, 202), pressSpecial: c(100, 20, 36),
-                text: c(118, 26, 44), specialText: .white,
-                accent: c(150, 34, 56), depth: 4, radius: 10, short: "버건디 그레이"),
         KBTheme(id: "pin", name: "핀스트라이프",
                 bg: c(250, 250, 251), key: .white, special: c(30, 30, 34),
                 pressKey: c(236, 236, 238), pressSpecial: c(54, 54, 58),
@@ -163,6 +158,27 @@ struct KBTheme {
                 accent: c(136, 86, 250), depth: 4, radius: 10, short: "라벤더"),
 
         // ---- 겨울 (레트로 기계식 키캡: 오목한 윗면 + 도톰한 몸통),
+        // ---- 버건디 스페셜 ----
+        KBTheme(id: "bur_key", name: "버건디 키",
+                bg: c(150, 150, 156), key: c(118, 26, 44), special: c(70, 70, 76),
+                pressKey: c(106, 23, 39), pressSpecial: c(61, 61, 66),
+                text: .white, specialText: .white,
+                accent: c(150, 34, 56), depth: 4, radius: 10, short: "버건디 키", group: "special"),
+        KBTheme(id: "bur_silver", name: "버건디 실버",
+                bg: c(110, 22, 40), key: c(206, 206, 210), special: c(150, 150, 156),
+                pressKey: c(185, 185, 189), pressSpecial: c(132, 132, 137),
+                text: c(110, 22, 40), specialText: .white,
+                accent: c(70, 70, 76), depth: 4, radius: 10, short: "버건디 실버", group: "special"),
+        KBTheme(id: "bur_charcoal", name: "버건디 차콜",
+                bg: c(72, 72, 78), key: c(120, 28, 48), special: c(40, 40, 44),
+                pressKey: c(108, 25, 43), pressSpecial: c(35, 35, 38),
+                text: c(236, 226, 228), specialText: c(210, 210, 216),
+                accent: c(150, 150, 158), depth: 4, radius: 10, short: "버건디 차콜", group: "special"),
+        KBTheme(id: "bur_gold", name: "버건디 골드",
+                bg: c(70, 12, 26), key: c(128, 24, 46), special: c(92, 16, 32),
+                pressKey: c(115, 21, 41), pressSpecial: c(80, 14, 28),
+                text: c(232, 192, 118), specialText: c(232, 192, 118),
+                accent: c(214, 170, 86), depth: 4, radius: 10, short: "버건디 골드", group: "special"),
     ]
 
     static var colors: [KBTheme] { all.filter { $0.group == "color" } }
@@ -171,7 +187,12 @@ struct KBTheme {
     /// 키캡 모양을 고를 수 있는 테마
     static func capped(_ t: KBTheme) -> Bool { true }
     /// 메뉴 한 장에 10개씩
-    static var pages: [[KBTheme]] { stride(from: 0, to: all.count, by: 10).map { Array(all[$0..<min($0 + 10, all.count)]) } }
+    static var mainList: [KBTheme] { all.filter { $0.group == "color" } }
+    static var pages: [[KBTheme]] { let m = mainList; return stride(from: 0, to: m.count, by: 10).map { Array(m[$0..<min($0 + 10, m.count)]) } }
+    static var special: [KBTheme] { all.filter { $0.group == "special" } }
+    /// 메뉴 탭: 숫자는 장, "s"는 버건디 스페셜
+    static func tabList(_ tab: String) -> [KBTheme] { tab == "s" ? special : page(Int(tab) ?? 0) }
+    static func tabOf(_ t: KBTheme) -> String { t.group == "special" ? "s" : String(pageOf(t.id)) }
     static func page(_ i: Int) -> [KBTheme] { i < pages.count ? pages[i] : pages[0] }
     static func pageOf(_ id: String) -> Int { pages.firstIndex { $0.contains { $0.id == id } } ?? 0 }
 

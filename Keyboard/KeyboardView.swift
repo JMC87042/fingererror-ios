@@ -803,7 +803,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         menuTouch = oid
         let space = keys.first(where: { $0.id == "SPACE" })?.frame ?? CGRect(x: 0, y: bounds.height - 50, width: bounds.width, height: 46)
         menu.frame = bounds
-        menu.show(current: theme.id, tab: String(KBTheme.pageOf(theme.id)), above: space, status: menuStatus)
+        menu.show(current: theme.id, tab: KBTheme.tabOf(theme), above: space, status: menuStatus)
         addSubview(menu)
     }
 
@@ -960,7 +960,7 @@ final class ThemeMenuView: UIView {
         status.clipsToBounds = true
         panel.addSubview(status)
         // [컬러] [겨울 레트로] 탭 + '키캡: 젤리 ▾'
-        for (l, txt) in [(tabColor, "1"), (tabRetro, "2"), (tabWinter, "3"), (capBtn, "")] {
+        for (l, txt) in [(tabColor, "1"), (tabRetro, "2"), (tabWinter, "3"), (tabSpecial, "버건디"), (capBtn, "")] {
             l.text = txt
             l.font = ThemeFont.ui(12.5)
             l.textAlignment = .center
@@ -975,6 +975,7 @@ final class ThemeMenuView: UIView {
     private let tabColor = UILabel()
     private let tabRetro = UILabel()
     private let tabWinter = UILabel()
+    private let tabSpecial = UILabel()
     private let capBtn = UILabel()
     private var tab = "0"
 
@@ -983,7 +984,7 @@ final class ThemeMenuView: UIView {
         for c in chips { c.box.removeFromSuperview(); c.name.removeFromSuperview() }
         chips = []
         let cap = ThemeStore.capId()
-        for t in KBTheme.page(Int(tab) ?? 0) {
+        for t in KBTheme.tabList(tab) {
             let box = UIView()
             box.layer.cornerRadius = 7
             box.layer.borderWidth = 0
@@ -1053,10 +1054,12 @@ final class ThemeMenuView: UIView {
         let np = KBTheme.pages.count
         tabRetro.isHidden = np < 2
         tabWinter.isHidden = np < 3
+        let lastTab = [tabColor, tabRetro, tabWinter][min(np, 3) - 1]
+        tabSpecial.frame = CGRect(x: lastTab.frame.maxX + 8, y: ty, width: 62, height: 22)
         capBtn.frame = CGRect(x: panel.bounds.width - pad - 112, y: ty, width: 112, height: 22)
         let peach = UIColor(red: 1, green: 160 / 255, blue: 132 / 255, alpha: 1)
         let off = UIColor(red: 238 / 255, green: 234 / 255, blue: 230 / 255, alpha: 1)
-        for (l, k) in [(tabColor, "0"), (tabRetro, "1"), (tabWinter, "2")] {
+        for (l, k) in [(tabColor, "0"), (tabRetro, "1"), (tabWinter, "2"), (tabSpecial, "s")] {
             l.backgroundColor = tab == k ? peach : off
             l.textColor = tab == k ? .white : UIColor(white: 0.35, alpha: 1)
         }
@@ -1084,6 +1087,7 @@ final class ThemeMenuView: UIView {
         if tabColor.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:0" }
         if !tabRetro.isHidden, tabRetro.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:1" }
         if !tabWinter.isHidden, tabWinter.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:2" }
+        if tabSpecial.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:s" }
         if !capBtn.isHidden, capBtn.frame.insetBy(dx: -3, dy: -3).contains(q) { return "CAP" }
         for c in chips where c.box.frame.union(c.name.frame).insetBy(dx: -3, dy: -3).contains(q) { return c.id }
         return nil
