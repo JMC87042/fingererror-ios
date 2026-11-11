@@ -199,7 +199,7 @@ struct KBTheme {
     static func pageOf(_ id: String) -> Int { pages.firstIndex { $0.contains { $0.id == id } } ?? 0 }
 
     /// 컬러 테마의 키캡 모양 (드롭다운)
-    static let caps: [(id: String, name: String)] = [("jelly", "젤리"), ("round", "동글 타자기"), ("clear", "투명 젤리"), ("clay", "클레이"), ("sa", "레트로 기계식")]
+    static let caps: [(id: String, name: String)] = [("jelly", "젤리"), ("round", "동글 타자기"), ("clay", "클레이"), ("sa", "레트로 기계식")]
     static func capName(_ id: String) -> String { caps.first { $0.id == id }?.name ?? "젤리" }
 
     /// 미리보기 그림 이름 (컬러 테마는 키캡 모양마다 따로)
@@ -208,7 +208,10 @@ struct KBTheme {
     /// 컬러 테마는 고른 키캡 모양으로
     static func find(_ id: String) -> KBTheme {
         var t = all.first { $0.id == id } ?? standard
-        if capped(t) { t.cap = ThemeStore.capId() }
+        if capped(t) {
+            let c = ThemeStore.capId()
+            t.cap = caps.contains { $0.id == c } ? c : "jelly"   // 없어진 모양(투명 젤리)은 젤리로
+        }
         return t
     }
 }

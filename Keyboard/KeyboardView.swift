@@ -262,7 +262,7 @@ final class KeyCap: UIView {
                 backgroundColor = KeyCap.mix(top, .black, (isSpecial || isAccent) ? 0.26 : 0.18)
                 grad.type = .radial
                 grad.startPoint = CGPoint(x: 0.4, y: 0.35); grad.endPoint = CGPoint(x: 1.05, y: 1.05)
-                grad.colors = [KeyCap.mix(top, .white, isDown ? 0.15 : 0.5).cgColor, top.cgColor]
+                grad.colors = [KeyCap.mix(top, .white, isDown ? 0.06 : 0.2).cgColor, top.cgColor]   // 너무 밝으면 뿌옇게 보여서 은은하게
                 ring.isHidden = false
                 ring.strokeColor = KeyCap.mix(top, .black, 0.12).withAlphaComponent(0.6).cgColor
                 gloss.isHidden = true
@@ -833,7 +833,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         if id == "REPORT" { closeMenu(); onReport?(); return }
         if id.hasPrefix("TAB:") { menu.setTab(String(id.dropFirst(4))); return }
         if id == "CAP" {
-            // 키캡 모양 돌려 고르기: 젤리 → 동글 → 투명 → 클레이
+            // 키캡 모양 돌려 고르기: 젤리 → 동글 → 클레이 → 레트로
             let ids = KBTheme.caps.map { $0.id }
             let i = ids.firstIndex(of: ThemeStore.capId()) ?? 0
             ThemeStore.saveCap(ids[(i + 1) % ids.count])

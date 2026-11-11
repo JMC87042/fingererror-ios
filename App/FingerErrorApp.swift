@@ -11,7 +11,7 @@ struct FingerErrorApp: App {
 struct ContentView: View {
     @State private var text = ""
     @State private var themeId = ThemeStore.currentId()
-    @State private var capId = ThemeStore.capId()
+    @State private var capId = KBTheme.caps.contains { $0.id == ThemeStore.capId() } ? ThemeStore.capId() : "jelly"
 
     var body: some View {
         NavigationStack {
@@ -96,7 +96,7 @@ struct ContentView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                Text("버전 2026.11.12-14 (버건디 흰 선 제거) · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
+                Text("버전 2026.11.12-15 (키캡 4가지 · 동글 선명하게) · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
             }
             .navigationTitle("핑거에러")
             // 3D 젤리: 크림 배경 + 복숭아 포인트
