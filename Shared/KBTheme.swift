@@ -28,7 +28,7 @@ struct KBTheme {
     var sprinkle: String? = nil       // 키 모서리 곳곳의 작은 잎 (그림 이름 앞부분)
     var jelly: Bool = true            // 3D 키캡 (아래 cap 모양으로 그림)
     var cap: String = "jelly"         // 키캡 모양: jelly 젤리 · round 동글 타자기 · clear 투명 젤리 · clay 클레이 · sa 레트로 기계식
-    var group: String = "color"       // color: 컬러 테마 (키캡 모양 고르기) · retro: 겨울 레트로 (기계식 고정)
+    var group: String = "color"       // color: 컬러 · retro: 레트로 (둘 다 키캡 모양 고르기) · winter: 겨울 (기계식 고정)
 
     var menuName: String { short ?? name }
 
@@ -104,77 +104,132 @@ struct KBTheme {
                 text: c(110, 72, 50), specialText: .white,
                 accent: c(150, 96, 64), depth: 4, radius: 10),
 
-        // ---- 겨울 레트로 (레트로 기계식 키캡: 오목한 윗면 + 도톰한 몸통) ----
+        // ---- 레트로 10색 (키캡 모양 고르기) ----
+        KBTheme(id: "rt_cream", name: "크림 & 오렌지",
+                bg: c(255, 236, 214), key: c(255, 251, 240), special: c(255, 146, 72),
+                pressKey: c(239, 235, 225), pressSpecial: c(234, 134, 66),
+                text: c(110, 80, 60), specialText: .white,
+                accent: c(255, 96, 62), depth: 4, radius: 10, short: "크림 오렌지", group: "retro"),
+        KBTheme(id: "rt_navy", name: "네이비 & 오렌지",
+                bg: c(36, 52, 92), key: c(246, 242, 232), special: c(72, 98, 156),
+                pressKey: c(231, 227, 218), pressSpecial: c(66, 90, 143),
+                text: c(34, 46, 76), specialText: c(255, 248, 236),
+                accent: c(250, 152, 40), depth: 4, radius: 10, short: "네이비", group: "retro"),
+        KBTheme(id: "rt_royal", name: "로열 블루 & 골드",
+                bg: c(46, 84, 176), key: c(80, 124, 220), special: c(255, 204, 64),
+                pressKey: c(75, 116, 206), pressSpecial: c(234, 187, 58),
+                text: c(255, 255, 255), specialText: c(90, 60, 10),
+                accent: c(255, 204, 64), depth: 4, radius: 10, short: "로열 블루", group: "retro"),
+        KBTheme(id: "rt_mint", name: "민트 & 크림",
+                bg: c(120, 220, 200), key: c(255, 253, 242), special: c(70, 206, 184),
+                pressKey: c(239, 237, 227), pressSpecial: c(64, 189, 169),
+                text: c(40, 110, 100), specialText: .white,
+                accent: c(255, 112, 90), depth: 4, radius: 10, short: "민트 크림", group: "retro"),
+        KBTheme(id: "rt_cherry", name: "체리 & 크림",
+                bg: c(214, 44, 72), key: c(255, 242, 228), special: c(255, 90, 110),
+                pressKey: c(239, 227, 214), pressSpecial: c(234, 82, 101),
+                text: c(170, 40, 60), specialText: .white,
+                accent: c(255, 196, 90), depth: 4, radius: 10, short: "체리", group: "retro"),
+        KBTheme(id: "rt_mono", name: "모노 + 레드 포인트",
+                bg: c(44, 44, 48), key: c(78, 78, 86), special: c(240, 240, 236),
+                pressKey: c(73, 73, 80), pressSpecial: c(220, 220, 217),
+                text: c(246, 246, 242), specialText: c(40, 40, 44),
+                accent: c(255, 80, 80), depth: 4, radius: 10, short: "모노", group: "retro"),
+        KBTheme(id: "rt_milk", name: "딸기 우유",
+                bg: c(255, 206, 220), key: c(255, 255, 255), special: c(255, 116, 156),
+                pressKey: c(239, 239, 239), pressSpecial: c(234, 106, 143),
+                text: c(200, 70, 110), specialText: .white,
+                accent: c(255, 72, 124), depth: 4, radius: 10, short: "딸기 우유", group: "retro"),
+        KBTheme(id: "rt_matcha", name: "말차 라떼",
+                bg: c(168, 214, 130), key: c(252, 252, 238), special: c(104, 176, 80),
+                pressKey: c(236, 236, 223), pressSpecial: c(95, 161, 73),
+                text: c(70, 110, 50), specialText: .white,
+                accent: c(226, 146, 74), depth: 4, radius: 10, short: "말차", group: "retro"),
+        KBTheme(id: "rt_sky", name: "하늘 & 핑크",
+                bg: c(204, 228, 252), key: c(255, 255, 255), special: c(118, 180, 244),
+                pressKey: c(239, 239, 239), pressSpecial: c(108, 165, 224),
+                text: c(60, 110, 170), specialText: .white,
+                accent: c(255, 128, 170), depth: 4, radius: 10, short: "하늘 핑크", group: "retro"),
+        KBTheme(id: "rt_lavender", name: "라벤더 드림",
+                bg: c(178, 148, 244), key: c(250, 246, 255), special: c(196, 156, 255),
+                pressKey: c(235, 231, 239), pressSpecial: c(180, 143, 234),
+                text: c(110, 70, 190), specialText: .white,
+                accent: c(136, 86, 250), depth: 4, radius: 10, short: "라벤더", group: "retro"),
+
+        // ---- 겨울 (레트로 기계식 키캡: 오목한 윗면 + 도톰한 몸통) ----
         KBTheme(id: "cherry", name: "체리 & 크림",
                 bg: c(214, 44, 72), key: c(255, 242, 228), special: c(255, 90, 110),
                 pressKey: c(240, 224, 208), pressSpecial: c(236, 72, 94),
                 text: c(170, 40, 60), specialText: .white,
-                accent: c(255, 196, 90), short: "체리", cap: "sa", group: "retro"),
+                accent: c(255, 196, 90), short: "체리", cap: "sa", group: "winter"),
         KBTheme(id: "milk", name: "딸기 우유",
                 bg: c(255, 206, 220), key: .white, special: c(255, 116, 156),
                 pressKey: c(246, 236, 240), pressSpecial: c(240, 96, 138),
                 text: c(200, 70, 110), specialText: .white,
-                accent: c(255, 72, 124), cap: "sa", group: "retro"),
+                accent: c(255, 72, 124), cap: "sa", group: "winter"),
         KBTheme(id: "royal", name: "로열 블루 & 골드",
                 bg: c(46, 84, 176), key: c(80, 124, 220), special: c(255, 204, 64),
                 pressKey: c(66, 106, 196), pressSpecial: c(236, 184, 44),
                 text: .white, specialText: c(90, 60, 10),
-                accent: c(255, 204, 64), short: "로열 블루", cap: "sa", group: "retro"),
+                accent: c(255, 204, 64), short: "로열 블루", cap: "sa", group: "winter"),
         KBTheme(id: "winter", name: "눈사람",
                 bg: c(170, 200, 240), key: c(252, 254, 255), special: c(150, 190, 240),
                 pressKey: c(226, 238, 252), pressSpecial: c(130, 172, 228),
                 text: c(60, 100, 170), specialText: .white,
                 accent: c(110, 160, 232),
                 bgImage: "bg_winter", enterIcon: "enter_snowman", sticker: "sticker_snow",
-                cap: "sa", group: "retro"),
+                cap: "sa", group: "winter"),
         KBTheme(id: "red", name: "크리스마스",
                 bg: c(150, 20, 32), key: c(255, 248, 238), special: c(214, 52, 58),
                 pressKey: c(240, 226, 214), pressSpecial: c(190, 40, 48),
                 text: c(40, 120, 70), specialText: .white,
                 accent: c(34, 130, 70),
                 bgImage: "bg_red", enterIcon: "enter_snowman_red", sticker: "sticker_holly",
-                cap: "sa", group: "retro"),
+                cap: "sa", group: "winter"),
         KBTheme(id: "holly", name: "홀리 그린",
                 bg: c(30, 110, 70), key: c(255, 250, 240), special: c(220, 50, 56),
                 pressKey: c(240, 232, 218), pressSpecial: c(196, 40, 48),
                 text: c(30, 100, 60), specialText: .white,
-                accent: c(220, 50, 56), short: "홀리", cap: "sa", group: "retro"),
+                accent: c(220, 50, 56), short: "홀리", cap: "sa", group: "winter"),
         KBTheme(id: "choco", name: "핫초코",
                 bg: c(110, 70, 50), key: c(255, 248, 236), special: c(170, 110, 80),
                 pressKey: c(240, 228, 212), pressSpecial: c(150, 94, 66),
                 text: c(110, 70, 50), specialText: .white,
-                accent: c(240, 150, 170), cap: "sa", group: "retro"),
+                accent: c(240, 150, 170), cap: "sa", group: "winter"),
         KBTheme(id: "aurora", name: "오로라",
                 bg: c(40, 44, 100), key: c(214, 240, 250), special: c(140, 110, 230),
                 pressKey: c(190, 222, 238), pressSpecial: c(120, 92, 210),
                 text: c(50, 70, 130), specialText: .white,
-                accent: c(70, 206, 170), cap: "sa", group: "retro"),
+                accent: c(70, 206, 170), cap: "sa", group: "winter"),
         KBTheme(id: "ginger", name: "진저브레드",
                 bg: c(196, 120, 70), key: c(255, 250, 244), special: c(160, 90, 50),
                 pressKey: c(240, 230, 218), pressSpecial: c(140, 76, 40),
                 text: c(150, 85, 45), specialText: .white,
-                accent: c(220, 60, 60), short: "진저", cap: "sa", group: "retro"),
+                accent: c(220, 60, 60), short: "진저", cap: "sa", group: "winter"),
         KBTheme(id: "mono", name: "기본 블랙",
                 bg: c(30, 30, 34), key: c(70, 70, 76), special: c(48, 48, 52),
                 pressKey: c(96, 96, 102), pressSpecial: c(70, 70, 76),
                 text: c(246, 246, 242), specialText: c(246, 246, 242),
-                cap: "sa", group: "retro"),
+                cap: "sa", group: "winter"),
     ]
 
     static var colors: [KBTheme] { all.filter { $0.group == "color" } }
     static var retro: [KBTheme] { all.filter { $0.group == "retro" } }
+    static func group(_ g: String) -> [KBTheme] { all.filter { $0.group == g } }
+    /// 키캡 모양을 고를 수 있는 테마
+    static func capped(_ t: KBTheme) -> Bool { t.group == "color" || t.group == "retro" }
 
     /// 컬러 테마의 키캡 모양 (드롭다운)
-    static let caps: [(id: String, name: String)] = [("jelly", "젤리"), ("round", "동글 타자기"), ("clear", "투명 젤리"), ("clay", "클레이")]
+    static let caps: [(id: String, name: String)] = [("jelly", "젤리"), ("round", "동글 타자기"), ("clear", "투명 젤리"), ("clay", "클레이"), ("sa", "레트로 기계식")]
     static func capName(_ id: String) -> String { caps.first { $0.id == id }?.name ?? "젤리" }
 
     /// 미리보기 그림 이름 (컬러 테마는 키캡 모양마다 따로)
-    static func previewName(_ t: KBTheme, cap: String) -> String { t.group == "color" ? "\(t.id)_\(cap)" : t.id }
+    static func previewName(_ t: KBTheme, cap: String) -> String { capped(t) ? "\(t.id)_\(cap)" : t.id }
 
     /// 컬러 테마는 고른 키캡 모양으로
     static func find(_ id: String) -> KBTheme {
         var t = all.first { $0.id == id } ?? standard
-        if t.group == "color" { t.cap = ThemeStore.capId() }
+        if capped(t) { t.cap = ThemeStore.capId() }
         return t
     }
 }

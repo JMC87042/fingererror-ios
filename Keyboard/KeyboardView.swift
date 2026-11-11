@@ -807,13 +807,13 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
     private func choose(_ id: String) {
         if id == "REPORT" { closeMenu(); onReport?(); return }
-        if id == "TAB:color" || id == "TAB:retro" { menu.setTab(String(id.dropFirst(4))); return }
+        if id.hasPrefix("TAB:") { menu.setTab(String(id.dropFirst(4))); return }
         if id == "CAP" {
             // 키캡 모양 돌려 고르기: 젤리 → 동글 → 투명 → 클레이
             let ids = KBTheme.caps.map { $0.id }
             let i = ids.firstIndex(of: ThemeStore.capId()) ?? 0
             ThemeStore.saveCap(ids[(i + 1) % ids.count])
-            if theme.group != "color" { ThemeStore.save(KBTheme.colors[0].id) }
+            if !KBTheme.capped(theme) { ThemeStore.save(KBTheme.colors[0].id) }
             applyTheme(KBTheme.find(ThemeStore.currentId()))
             menu.setCurrent(theme.id)
             return
@@ -951,7 +951,7 @@ final class ThemeMenuView: UIView {
         status.clipsToBounds = true
         panel.addSubview(status)
         // [컬러] [겨울 레트로] 탭 + '키캡: 젤리 ▾'
-        for (l, txt) in [(tabColor, "컬러"), (tabRetro, "겨울 레트로"), (capBtn, "")] {
+        for (l, txt) in [(tabColor, "컬러"), (tabRetro, "레트로"), (tabWinter, "겨울"), (capBtn, "")] {
             l.text = txt
             l.font = ThemeFont.ui(12.5)
             l.textAlignment = .center
@@ -965,6 +965,7 @@ final class ThemeMenuView: UIView {
 
     private let tabColor = UILabel()
     private let tabRetro = UILabel()
+    private let tabWinter = UILabel()
     private let capBtn = UILabel()
     private var tab = "color"
 
@@ -973,7 +974,7 @@ final class ThemeMenuView: UIView {
         for c in chips { c.box.removeFromSuperview(); c.name.removeFromSuperview() }
         chips = []
         let cap = ThemeStore.capId()
-        for t in (tab == "retro" ? KBTheme.retro : KBTheme.colors) {
+        for t in KBTheme.group(tab) {
             let box = UIView()
             box.layer.cornerRadius = 7
             box.layer.borderWidth = 0
@@ -1036,8 +1037,9 @@ final class ThemeMenuView: UIView {
         let g: CGFloat = 6
         let cw = (panel.bounds.width - pad * 2 - g * CGFloat(cols - 1)) / CGFloat(cols)
         let ty: CGFloat = 32
-        tabColor.frame = CGRect(x: pad, y: ty, width: 54, height: 22)
-        tabRetro.frame = CGRect(x: tabColor.frame.maxX + 6, y: ty, width: 82, height: 22)
+        tabColor.frame = CGRect(x: pad, y: ty, width: 48, height: 22)
+        tabRetro.frame = CGRect(x: tabColor.frame.maxX + 5, y: ty, width: 54, height: 22)
+        tabWinter.frame = CGRect(x: tabRetro.frame.maxX + 5, y: ty, width: 48, height: 22)
         capBtn.frame = CGRect(x: panel.bounds.width - pad - 112, y: ty, width: 112, height: 22)
         let peach = UIColor(red: 1, green: 160 / 255, blue: 132 / 255, alpha: 1)
         let off = UIColor(red: 238 / 255, green: 234 / 255, blue: 230 / 255, alpha: 1)
@@ -1045,7 +1047,9 @@ final class ThemeMenuView: UIView {
         tabColor.textColor = tab == "color" ? .white : UIColor(white: 0.35, alpha: 1)
         tabRetro.backgroundColor = tab == "retro" ? peach : off
         tabRetro.textColor = tab == "retro" ? .white : UIColor(white: 0.35, alpha: 1)
-        capBtn.isHidden = tab != "color"
+        tabWinter.backgroundColor = tab == "winter" ? peach : off
+        tabWinter.textColor = tab == "winter" ? .white : UIColor(white: 0.35, alpha: 1)
+        capBtn.isHidden = tab == "winter"
         capBtn.text = "키캡: " + KBTheme.capName(ThemeStore.capId()) + " ▾"
         capBtn.backgroundColor = UIColor(red: 1, green: 238 / 255, blue: 228 / 255, alpha: 1)
         capBtn.textColor = UIColor(red: 196 / 255, green: 90 / 255, blue: 64 / 255, alpha: 1)
@@ -1068,6 +1072,7 @@ final class ThemeMenuView: UIView {
         if status.frame.insetBy(dx: -4, dy: -4).contains(q) { return "REPORT" }
         if tabColor.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:color" }
         if tabRetro.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:retro" }
+        if tabWinter.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:winter" }
         if !capBtn.isHidden, capBtn.frame.insetBy(dx: -3, dy: -3).contains(q) { return "CAP" }
         for c in chips where c.box.frame.union(c.name.frame).insetBy(dx: -3, dy: -3).contains(q) { return c.id }
         return nil

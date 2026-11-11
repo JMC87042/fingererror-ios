@@ -47,9 +47,9 @@ struct ContentView: View {
                     .pickerStyle(.menu)
                     .onChange(of: capId) { v in ThemeStore.saveCap(v) }
                 } header: {
-                    Text("키캡 모양 · 컬러 테마에 적용").font(.custom(ThemeFont.name, size: 15))
+                    Text("키캡 모양 · 컬러·레트로 테마에 적용").font(.custom(ThemeFont.name, size: 15))
                 }
-                ForEach([("color", "컬러 테마"), ("retro", "겨울 레트로 · 기계식 키캡")], id: \.0) { g in
+                ForEach([("color", "컬러 · 키캡 모양 적용"), ("retro", "레트로 · 키캡 모양 적용"), ("winter", "겨울 · 기계식 키캡")], id: \.0) { g in
                     Section {
                         ForEach(KBTheme.all.filter { $0.group == g.0 }, id: \.id) { t in
                             Button {
@@ -81,7 +81,7 @@ struct ContentView: View {
                     } header: {
                         Text(g.1).font(.custom(ThemeFont.name, size: 15))
                     } footer: {
-                        if g.0 == "retro" {
+                        if g.0 == "winter" {
                             Text("색만 바뀌고 학습 기록은 그대로예요. 크림 테마는 다크모드를 따라가요. 키보드를 쓰다가 스페이스바 오른쪽 팻핑이를 꾹 누르면 바로 바꿀 수 있어요.")
                         }
                     }
@@ -96,7 +96,7 @@ struct ContentView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                Text("버전 2026.11.11-3 (키캡 모양 · 겨울 레트로) · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
+                Text("버전 2026.11.11-4 (레트로 10색 · 키캡 5종) · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
             }
             .navigationTitle("핑거에러")
             // 3D 젤리: 크림 배경 + 복숭아 포인트
