@@ -14,6 +14,8 @@ final class KeyCap: UIView {
     private let glossGrad = CAGradientLayer()
     /// 동글 타자기 안쪽 테두리
     private let ring = CAShapeLayer()
+    /// 가죽 박음질 점선
+    private let stitchLayer = CAShapeLayer()
     /// 투명 젤리 물방울 반사광
     private let drop = UIView()
     /// 계절 스티커 (키 모서리에 살짝 걸침, 누르는 영역과 무관)
@@ -48,6 +50,10 @@ final class KeyCap: UIView {
         ring.fillColor = UIColor.clear.cgColor
         ring.lineWidth = 1
         face.layer.insertSublayer(ring, above: grad)
+        stitchLayer.fillColor = UIColor.clear.cgColor
+        stitchLayer.lineWidth = 1.1
+        stitchLayer.lineDashPattern = [3.5, 2.5]
+        face.layer.insertSublayer(stitchLayer, above: ring)
         drop.isUserInteractionEnabled = false
         drop.backgroundColor = UIColor(white: 1, alpha: 0.75)
         drop.isHidden = true
@@ -146,6 +152,8 @@ final class KeyCap: UIView {
         grad.frame = face.bounds
         grad.cornerRadius = cr
         ring.frame = face.bounds
+        stitchLayer.frame = face.bounds
+        stitchLayer.path = UIBezierPath(roundedRect: face.bounds.insetBy(dx: 3.5, dy: 3.5), cornerRadius: 6).cgPath
         ring.path = theme.cap == "round" ? UIBezierPath(roundedRect: face.bounds.insetBy(dx: 2.5, dy: 2.5), cornerRadius: max(cr - 2.5, 0)).cgPath : nil
         CATransaction.commit()
         if theme.jelly {
@@ -213,6 +221,8 @@ final class KeyCap: UIView {
         drop.isHidden = true
         ring.isHidden = true
         body.isHidden = true
+        stitchLayer.isHidden = t.stitch == nil || isSpecial || isAccent
+        stitchLayer.strokeColor = t.stitch?.cgColor
         if t.jelly {
             // 3D 키캡: 아랫단은 윗면보다 진하게, 윗면은 위가 밝은 그라데이션, 바닥에 은은한 그림자
             let top = (face.backgroundColor ?? t.key).resolvedColor(with: traitCollection)
