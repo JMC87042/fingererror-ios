@@ -39,17 +39,13 @@ struct KBTheme {
         UIColor { $0.userInterfaceStyle == .dark ? dark : light }
     }
 
-    /// 1. 크림 젤리 (기본) — 말랑한 크림색 키캡, 복숭아 포인트. 폰이 다크모드면 그레이 젤리
+    /// 1. 블랙 퍼플 (기본) — 위는 블랙, 아래로 갈수록 보라 그라데이션 + 골드 포인트
     static let standard = KBTheme(
-        id: "default", name: "크림",
-        bg: dyn(c(246, 232, 218), c(26, 26, 30)),
-        key: dyn(c(255, 250, 242), c(92, 92, 100)),
-        special: dyn(c(255, 204, 182), c(62, 62, 70)),
-        pressKey: dyn(c(244, 234, 220), c(72, 72, 80)),
-        pressSpecial: dyn(c(246, 184, 160), c(84, 84, 92)),
-        text: dyn(c(112, 78, 60), .white), specialText: dyn(c(156, 72, 50), .white),
-        side: dyn(c(226, 202, 180), c(52, 52, 58)), sideSpecial: dyn(c(228, 152, 124), c(36, 36, 42)),
-        accent: c(255, 138, 108), depth: 4, radius: 10)
+        id: "default", name: "블랙 퍼플",
+        bg: c(40, 30, 80), key: c(36, 32, 56), special: c(112, 82, 204),
+        pressKey: c(56, 50, 84), pressSpecial: c(96, 68, 184),
+        text: c(226, 218, 255), specialText: .white,
+        accent: c(214, 172, 76), depth: 4, radius: 10, bgImage: "bg_kit")
 
     static let all: [KBTheme] = [
         standard,

@@ -82,7 +82,7 @@ struct ContentView: View {
                         Text(g.1).font(.custom(ThemeFont.name, size: 15))
                     } footer: {
                         if g.0 == "winter" {
-                            Text("색만 바뀌고 학습 기록은 그대로예요. 크림 테마는 다크모드를 따라가요. 키보드를 쓰다가 스페이스바 오른쪽 팻핑이를 꾹 누르면 바로 바꿀 수 있어요.")
+                            Text("색만 바뀌고 학습 기록은 그대로예요. 키보드를 쓰다가 스페이스바 오른쪽 팻핑이를 꾹 누르면 바로 바꿀 수 있어요.")
                         }
                     }
                 }
@@ -96,7 +96,7 @@ struct ContentView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                Text("버전 2026.11.11-5 (로즈 골드 · 모노 흰 엔터) · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
+                Text("버전 2026.11.11-6 (블랙 퍼플 기본 테마) · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
             }
             .navigationTitle("핑거에러")
             // 3D 젤리: 크림 배경 + 복숭아 포인트
