@@ -11,6 +11,7 @@ struct FingerErrorApp: App {
 struct ContentView: View {
     @State private var text = ""
     @State private var themeId = ThemeStore.currentId()
+    @State private var capId = ThemeStore.capId()
 
     var body: some View {
         NavigationStack {
@@ -40,37 +41,50 @@ struct ContentView: View {
                     }
                 }
                 Section {
-                    ForEach(KBTheme.all, id: \.id) { t in
-                        Button {
-                            ThemeStore.save(t.id)
-                            themeId = t.id
-                        } label: {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text(t.name).font(.custom(ThemeFont.name, size: 19)).foregroundStyle(.primary)
-                                    Spacer()
-                                    if themeId == t.id {
-                                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                                    }
-                                }
-                                Image("theme_\(t.id)")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .shadow(color: .black.opacity(0.12), radius: 0, x: 0, y: 4)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(themeId == t.id ? Color.green : Color.clear, lineWidth: 3)
-                                    )
-                            }
-                            .padding(.vertical, 4)
-                        }
-                        .buttonStyle(.plain)
+                    Picker("키캡 모양", selection: $capId) {
+                        ForEach(KBTheme.caps, id: \.id) { c in Text(c.name).tag(c.id) }
                     }
+                    .pickerStyle(.menu)
+                    .onChange(of: capId) { v in ThemeStore.saveCap(v) }
                 } header: {
-                    Text("키보드 테마").font(.custom(ThemeFont.name, size: 15))
-                } footer: {
-                    Text("색만 바뀌고 학습 기록은 그대로예요. 기본 테마는 다크모드를 따라가요. 키보드를 쓰다가 스페이스바 오른쪽 팻핑이를 꾹 누르면 바로 바꿀 수 있어요.")
+                    Text("키캡 모양 · 컬러 테마에 적용").font(.custom(ThemeFont.name, size: 15))
+                }
+                ForEach([("color", "컬러 테마"), ("retro", "겨울 레트로 · 기계식 키캡")], id: \.0) { g in
+                    Section {
+                        ForEach(KBTheme.all.filter { $0.group == g.0 }, id: \.id) { t in
+                            Button {
+                                ThemeStore.save(t.id)
+                                themeId = t.id
+                            } label: {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text(t.name).font(.custom(ThemeFont.name, size: 19)).foregroundStyle(.primary)
+                                        Spacer()
+                                        if themeId == t.id {
+                                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                                        }
+                                    }
+                                    Image("theme_" + KBTheme.previewName(t, cap: capId))
+                                        .resizable()
+                                        .scaledToFit()
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .shadow(color: .black.opacity(0.12), radius: 0, x: 0, y: 4)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(themeId == t.id ? Color.green : Color.clear, lineWidth: 3)
+                                        )
+                                }
+                                .padding(.vertical, 4)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    } header: {
+                        Text(g.1).font(.custom(ThemeFont.name, size: 15))
+                    } footer: {
+                        if g.0 == "retro" {
+                            Text("색만 바뀌고 학습 기록은 그대로예요. 크림 테마는 다크모드를 따라가요. 키보드를 쓰다가 스페이스바 오른쪽 팻핑이를 꾹 누르면 바로 바꿀 수 있어요.")
+                        }
+                    }
                 }
                 Section("여기서 바로 연습") {
                     TextField("핑거에러로 쳐보세요", text: $text, axis: .vertical)
@@ -82,7 +96,7 @@ struct ContentView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                Text("버전 2026.11.11-2 (동글·투명·클레이 키캡) · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
+                Text("버전 2026.11.11-3 (키캡 모양 · 겨울 레트로) · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
             }
             .navigationTitle("핑거에러")
             // 3D 젤리: 크림 배경 + 복숭아 포인트

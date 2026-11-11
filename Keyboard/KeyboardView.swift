@@ -43,6 +43,8 @@ final class KeyCap: UIView {
         grad.startPoint = CGPoint(x: 0.5, y: 0)
         grad.endPoint = CGPoint(x: 0.5, y: 1)
         face.layer.insertSublayer(grad, at: 0)
+        body.isHidden = true
+        layer.insertSublayer(body, at: 0)
         ring.fillColor = UIColor.clear.cgColor
         ring.lineWidth = 1
         face.layer.insertSublayer(ring, above: grad)
@@ -97,19 +99,49 @@ final class KeyCap: UIView {
         refreshColor()
     }
 
+    /// 키캡 모양별 두께
+    private var capDepth: CGFloat {
+        guard theme.jelly else { return theme.depth }
+        switch theme.cap {
+        case "round": return 5
+        case "clear": return 3
+        case "clay", "sa": return 0
+        default: return 4
+        }
+    }
+    private var capRadius: CGFloat {
+        guard theme.jelly else { return theme.radius }
+        switch theme.cap {
+        case "clear", "clay": return max(theme.radius, 12)
+        case "sa": return 5
+        default: return max(theme.radius, 9)
+        }
+    }
+    /// 레트로 기계식 몸통
+    private let body = CAGradientLayer()
+
     override func layoutSubviews() {
         super.layoutSubviews()
         var f = bounds
-        let d = theme.depth
+        let d = capDepth
         if d > 0 {
             f.size.height -= d
             if isDown { f.origin.y += d * (theme.jelly ? 0.75 : 0.6) }
         }
+        if theme.jelly && theme.cap == "sa" {
+            // 몸통 안쪽 오목한 윗면 (글자는 여기 가운데)
+            let push: CGFloat = isDown ? 2 : 0
+            f = CGRect(x: 4, y: 2.5 + push, width: bounds.width - 8, height: bounds.height - 9.5)
+            CATransaction.begin(); CATransaction.setDisableActions(true)
+            body.frame = bounds.offsetBy(dx: 0, dy: push).inset(by: UIEdgeInsets(top: 0, left: 0, bottom: push, right: 0))
+            body.cornerRadius = 7
+            CATransaction.commit()
+        }
         face.frame = f
         // 동글 타자기는 키 칸 안에서 동그랗게(넓은 키는 알약)
-        let cr = theme.cap == "round" ? min(bounds.width, f.height) / 2 : theme.radius
+        let cr = theme.jelly && theme.cap == "round" ? min(bounds.width, f.height) / 2 : capRadius
         face.layer.cornerRadius = cr
-        layer.cornerRadius = cr
+        layer.cornerRadius = theme.jelly && theme.cap == "sa" ? 7 : cr
         CATransaction.begin(); CATransaction.setDisableActions(true)
         grad.frame = face.bounds
         grad.cornerRadius = cr
@@ -121,9 +153,10 @@ final class KeyCap: UIView {
             switch theme.cap {
             case "clay": sp = bounds.offsetBy(dx: 0, dy: isDown ? 1 : 3.5).insetBy(dx: -1, dy: 0)
             case "round": sp = bounds.offsetBy(dx: 0, dy: 2).insetBy(dx: 1.5, dy: 0)
+            case "sa": sp = bounds.offsetBy(dx: 0, dy: isDown ? 1.5 : 3).insetBy(dx: 1, dy: 0)
             default: sp = bounds.offsetBy(dx: 0, dy: 1.6).insetBy(dx: 0.5, dy: 0)
             }
-            layer.shadowPath = UIBezierPath(roundedRect: sp, cornerRadius: cr).cgPath
+            layer.shadowPath = UIBezierPath(roundedRect: sp, cornerRadius: theme.cap == "sa" ? 7 : cr).cgPath
         }
         if theme.cap == "clear" {
             let fb = face.bounds
@@ -179,6 +212,7 @@ final class KeyCap: UIView {
         gloss.backgroundColor = t.jelly ? .clear : UIColor(white: 1, alpha: 0.35)
         drop.isHidden = true
         ring.isHidden = true
+        body.isHidden = true
         if t.jelly {
             // 3D 키캡: 아랫단은 윗면보다 진하게, 윗면은 위가 밝은 그라데이션, 바닥에 은은한 그림자
             let top = (face.backgroundColor ?? t.key).resolvedColor(with: traitCollection)
@@ -222,6 +256,18 @@ final class KeyCap: UIView {
                 gloss.isHidden = true
                 drop.isHidden = isDown
                 layer.shadowOpacity = 0
+            case "sa":
+                // 레트로 기계식: 아래로 진해지는 몸통 + 가운데가 살짝 오목한 윗면
+                backgroundColor = .clear
+                body.isHidden = false
+                body.colors = [KeyCap.mix(top, .black, 0.03).cgColor, KeyCap.mix(top, .black, 0.14).cgColor]
+                grad.type = .radial
+                grad.startPoint = CGPoint(x: 0.5, y: 0.65); grad.endPoint = CGPoint(x: 1.2, y: 1.35)
+                grad.colors = [top.cgColor, KeyCap.mix(top, .white, isDown ? 0.12 : 0.3).cgColor]
+                gloss.isHidden = true
+                layer.shadowColor = UIColor.black.cgColor
+                layer.shadowOpacity = isDown ? 0.14 : 0.24
+                layer.shadowRadius = 1
             case "clay":
                 // 클레이: 무광 점토. 퍼진 그림자, 누르면 그림자가 줄어듦
                 backgroundColor = .clear
@@ -747,7 +793,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         menuTouch = oid
         let space = keys.first(where: { $0.id == "SPACE" })?.frame ?? CGRect(x: 0, y: bounds.height - 50, width: bounds.width, height: 46)
         menu.frame = bounds
-        menu.show(current: theme.id, above: space, status: menuStatus)
+        menu.show(current: theme.id, tab: theme.group, above: space, status: menuStatus)
         addSubview(menu)
     }
 
@@ -761,6 +807,17 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
     private func choose(_ id: String) {
         if id == "REPORT" { closeMenu(); onReport?(); return }
+        if id == "TAB:color" || id == "TAB:retro" { menu.setTab(String(id.dropFirst(4))); return }
+        if id == "CAP" {
+            // 키캡 모양 돌려 고르기: 젤리 → 동글 → 투명 → 클레이
+            let ids = KBTheme.caps.map { $0.id }
+            let i = ids.firstIndex(of: ThemeStore.capId()) ?? 0
+            ThemeStore.saveCap(ids[(i + 1) % ids.count])
+            if theme.group != "color" { ThemeStore.save(KBTheme.colors[0].id) }
+            applyTheme(KBTheme.find(ThemeStore.currentId()))
+            menu.setCurrent(theme.id)
+            return
+        }
         ThemeStore.save(id)
         applyTheme(KBTheme.find(id))
         closeMenu()
@@ -893,11 +950,34 @@ final class ThemeMenuView: UIView {
         status.layer.cornerRadius = 10
         status.clipsToBounds = true
         panel.addSubview(status)
-        for t in KBTheme.all {
+        // [컬러] [겨울 레트로] 탭 + '키캡: 젤리 ▾'
+        for (l, txt) in [(tabColor, "컬러"), (tabRetro, "겨울 레트로"), (capBtn, "")] {
+            l.text = txt
+            l.font = ThemeFont.ui(12.5)
+            l.textAlignment = .center
+            l.layer.cornerRadius = 11
+            l.clipsToBounds = true
+            l.adjustsFontSizeToFitWidth = true
+            l.minimumScaleFactor = 0.7
+            panel.addSubview(l)
+        }
+    }
+
+    private let tabColor = UILabel()
+    private let tabRetro = UILabel()
+    private let capBtn = UILabel()
+    private var tab = "color"
+
+    /// 지금 탭의 테마 미리보기 칸 만들기
+    private func buildChips() {
+        for c in chips { c.box.removeFromSuperview(); c.name.removeFromSuperview() }
+        chips = []
+        let cap = ThemeStore.capId()
+        for t in (tab == "retro" ? KBTheme.retro : KBTheme.colors) {
             let box = UIView()
             box.layer.cornerRadius = 7
             box.layer.borderWidth = 0
-            let img = UIImageView(image: KeyCap.image("kprev_" + t.id))
+            let img = UIImageView(image: KeyCap.image("kprev_" + KBTheme.previewName(t, cap: cap) + ".jpg"))
             img.contentMode = .scaleAspectFill
             img.clipsToBounds = true
             img.layer.cornerRadius = 6
@@ -915,14 +995,34 @@ final class ThemeMenuView: UIView {
         }
     }
 
+    func setTab(_ t: String) {
+        tab = t
+        layoutAll()
+    }
+
+    func setCurrent(_ id: String) {
+        current = id
+        layoutAll()
+    }
+
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     private let status = UILabel()
 
-    func show(current: String, above space: CGRect, status text: String = "") {
+    private var spaceRect = CGRect.zero
+
+    func show(current: String, tab: String, above space: CGRect, status text: String = "") {
         self.current = current
+        self.tab = tab
+        spaceRect = space
         status.text = "📊 " + (text.isEmpty ? "리포트" : text) + " ›"
         hot = nil
+        layoutAll()
+    }
+
+    private func layoutAll() {
+        buildChips()
+        let space = spaceRect
         dim.frame = bounds
         let top: CGFloat = 6
         let bottom = space.minY - 6
@@ -935,9 +1035,23 @@ final class ThemeMenuView: UIView {
         let cols = 5
         let g: CGFloat = 6
         let cw = (panel.bounds.width - pad * 2 - g * CGFloat(cols - 1)) / CGFloat(cols)
-        let rowsTop: CGFloat = 32
-        let rowH = (panel.bounds.height - rowsTop - 6) / 2
-        let ih = min(cw * 0.6, rowH - 18)
+        let ty: CGFloat = 32
+        tabColor.frame = CGRect(x: pad, y: ty, width: 54, height: 22)
+        tabRetro.frame = CGRect(x: tabColor.frame.maxX + 6, y: ty, width: 82, height: 22)
+        capBtn.frame = CGRect(x: panel.bounds.width - pad - 112, y: ty, width: 112, height: 22)
+        let peach = UIColor(red: 1, green: 160 / 255, blue: 132 / 255, alpha: 1)
+        let off = UIColor(red: 238 / 255, green: 234 / 255, blue: 230 / 255, alpha: 1)
+        tabColor.backgroundColor = tab == "color" ? peach : off
+        tabColor.textColor = tab == "color" ? .white : UIColor(white: 0.35, alpha: 1)
+        tabRetro.backgroundColor = tab == "retro" ? peach : off
+        tabRetro.textColor = tab == "retro" ? .white : UIColor(white: 0.35, alpha: 1)
+        capBtn.isHidden = tab != "color"
+        capBtn.text = "키캡: " + KBTheme.capName(ThemeStore.capId()) + " ▾"
+        capBtn.backgroundColor = UIColor(red: 1, green: 238 / 255, blue: 228 / 255, alpha: 1)
+        capBtn.textColor = UIColor(red: 196 / 255, green: 90 / 255, blue: 64 / 255, alpha: 1)
+        let rowsTop: CGFloat = ty + 28
+        let rowH = (panel.bounds.height - rowsTop - 4) / 2
+        let ih = min(cw * 0.6, rowH - 17)
         for (i, c) in chips.enumerated() {
             let x = pad + CGFloat(i % cols) * (cw + g)
             let y = rowsTop + CGFloat(i / cols) * rowH
@@ -952,6 +1066,9 @@ final class ThemeMenuView: UIView {
     func item(at p: CGPoint) -> String? {
         let q = convert(p, to: panel)
         if status.frame.insetBy(dx: -4, dy: -4).contains(q) { return "REPORT" }
+        if tabColor.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:color" }
+        if tabRetro.frame.insetBy(dx: -3, dy: -3).contains(q) { return "TAB:retro" }
+        if !capBtn.isHidden, capBtn.frame.insetBy(dx: -3, dy: -3).contains(q) { return "CAP" }
         for c in chips where c.box.frame.union(c.name.frame).insetBy(dx: -3, dy: -3).contains(q) { return c.id }
         return nil
     }
@@ -963,6 +1080,8 @@ final class ThemeMenuView: UIView {
 
     private func refresh() {
         status.layer.borderWidth = hot == "REPORT" ? 2 : 0
+        capBtn.layer.borderWidth = hot == "CAP" ? 2 : 0
+        capBtn.layer.borderColor = UIColor(red: 1, green: 120 / 255, blue: 90 / 255, alpha: 1).cgColor
         status.layer.borderColor = UIColor(red: 1, green: 120 / 255, blue: 90 / 255, alpha: 1).cgColor
         for c in chips {
             if c.id == hot {
