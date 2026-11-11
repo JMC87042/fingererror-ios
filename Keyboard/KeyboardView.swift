@@ -274,10 +274,10 @@ final class KeyCap: UIView {
                 face.backgroundColor = top.withAlphaComponent(isDown ? 0.75 : 0.55)
                 backgroundColor = top.withAlphaComponent(0.35)
                 grad.colors = [KeyCap.mix(top, .white, 0.55).withAlphaComponent(isDown ? 0.86 : 0.75).cgColor, top.withAlphaComponent(0.0).cgColor]
-                face.layer.borderWidth = 1.3
+                face.layer.borderWidth = t.noRim ? 0 : 1.3
                 face.layer.borderColor = UIColor(white: 1, alpha: 0.85).cgColor
                 gloss.isHidden = true
-                drop.isHidden = isDown
+                drop.isHidden = isDown || t.noRim
                 layer.shadowOpacity = 0
             case "sa":
                 // 레트로 기계식: 아래로 진해지는 몸통 + 가운데가 살짝 오목한 윗면
@@ -295,7 +295,7 @@ final class KeyCap: UIView {
                 // 클레이: 무광 점토. 퍼진 그림자, 누르면 그림자가 줄어듦
                 backgroundColor = .clear
                 grad.colors = [KeyCap.mix(top, .white, isDown ? 0.05 : 0.28).cgColor, KeyCap.mix(top, .black, 0.05).cgColor]
-                face.layer.borderWidth = 1.5
+                face.layer.borderWidth = t.noRim ? 0 : 1.5
                 face.layer.borderColor = UIColor(white: 1, alpha: isDown ? 0.16 : 0.43).cgColor
                 gloss.isHidden = true
                 layer.shadowColor = KeyCap.mix(top, .black, 0.45).cgColor
@@ -303,6 +303,7 @@ final class KeyCap: UIView {
                 layer.shadowRadius = isDown ? 1.5 : 3.5
             default: break
             }
+            if t.noRim && t.cap == "jelly" { gloss.isHidden = true }
             CATransaction.commit()
             setNeedsLayout()
         } else {

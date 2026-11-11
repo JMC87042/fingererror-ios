@@ -30,6 +30,7 @@ struct KBTheme {
     var cap: String = "jelly"         // 키캡 모양: jelly 젤리 · round 동글 타자기 · clear 투명 젤리 · clay 클레이 · sa 레트로 기계식
     var stitch: UIColor? = nil        // 가죽 박음질 색 (글자 키 안쪽 점선)
     var metal: Bool = false           // 엔터 키를 금속처럼 반짝이게
+    var noRim: Bool = false           // 키 가장자리 흰 선·흰 반짝임 없이
     var group: String = "color"       // color: 컬러 · retro: 레트로 (둘 다 키캡 모양 고르기) · winter: 겨울 (기계식 고정)
 
     var menuName: String { short ?? name }
@@ -164,22 +165,22 @@ struct KBTheme {
                 bg: c(150, 150, 156), key: c(118, 26, 44), special: c(70, 70, 76),
                 pressKey: c(106, 23, 39), pressSpecial: c(61, 61, 66),
                 text: .white, specialText: .white,
-                accent: c(150, 34, 56), depth: 4, radius: 10, short: "버건디 키", group: "special"),
+                accent: c(150, 34, 56), depth: 4, radius: 10, short: "버건디 키", noRim: true, group: "special"),
         KBTheme(id: "bur_silver", name: "실버 키",
                 bg: c(110, 22, 40), key: c(206, 206, 210), special: c(150, 150, 156),
                 pressKey: c(185, 185, 189), pressSpecial: c(132, 132, 137),
                 text: c(110, 22, 40), specialText: .white,
-                accent: c(70, 70, 76), depth: 4, radius: 10, short: "실버 키", group: "special"),
+                accent: c(70, 70, 76), depth: 4, radius: 10, short: "실버 키", noRim: true, group: "special"),
         KBTheme(id: "bur_charcoal", name: "버건디 차콜",
                 bg: c(72, 72, 78), key: c(120, 28, 48), special: c(40, 40, 44),
                 pressKey: c(108, 25, 43), pressSpecial: c(35, 35, 38),
                 text: c(236, 226, 228), specialText: c(210, 210, 216),
-                accent: c(150, 150, 158), depth: 4, radius: 10, short: "버건디 차콜", group: "special"),
+                accent: c(150, 150, 158), depth: 4, radius: 10, short: "버건디 차콜", noRim: true, group: "special"),
         KBTheme(id: "bur_gold", name: "버건디 실버",
                 bg: c(70, 12, 26), key: c(128, 24, 46), special: c(92, 16, 32),
                 pressKey: c(115, 21, 41), pressSpecial: c(80, 14, 28),
                 text: c(232, 234, 240), specialText: c(214, 216, 224),
-                accent: c(158, 162, 176), depth: 4, radius: 10, short: "버건디 실버", group: "special"),
+                accent: c(158, 162, 176), depth: 4, radius: 10, short: "버건디 실버", noRim: true, group: "special"),
     ]
 
     static var colors: [KBTheme] { all.filter { $0.group == "color" } }
