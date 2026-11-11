@@ -26,7 +26,8 @@ struct KBTheme {
     var short: String? = nil          // 테마 메뉴에 보일 짧은 이름
     var spaceIcon: String? = nil      // 스페이스바 팻핑이 (밤 모자 등)
     var sprinkle: String? = nil       // 키 모서리 곳곳의 작은 잎 (그림 이름 앞부분)
-    var jelly: Bool = true            // 3D 젤리 키캡 (위가 밝은 윗면 + 두께 + 반짝임)
+    var jelly: Bool = true            // 3D 키캡 (아래 cap 모양으로 그림)
+    var cap: String = "jelly"         // 키캡 모양: jelly 젤리 · round 동글 타자기 · clear 투명 젤리 · clay 클레이
 
     var menuName: String { short ?? name }
 
@@ -57,29 +58,26 @@ struct KBTheme {
                 text: c(226, 226, 222), specialText: c(160, 160, 156),
                 side: c(18, 18, 22), sideSpecial: c(10, 10, 12), depth: 4, radius: 10),
         KBTheme(id: "mint", name: "민트 소다",
-                bg: c(150, 226, 212), key: c(238, 252, 248), special: c(96, 206, 186),
-                pressKey: c(214, 242, 236), pressSpecial: c(80, 190, 170),
-                text: c(30, 96, 86), specialText: .white,
-                side: c(150, 208, 196), sideSpecial: c(46, 150, 132), accent: c(40, 168, 148),
-                depth: 4, radius: 10),
-        KBTheme(id: "peach", name: "피치 코랄",
-                bg: c(255, 214, 200), key: c(255, 245, 239), special: c(255, 150, 128),
-                pressKey: c(252, 226, 216), pressSpecial: c(240, 130, 110),
-                text: c(186, 80, 64), specialText: .white,
-                side: c(236, 182, 166), sideSpecial: c(214, 96, 80), accent: c(246, 104, 84),
-                depth: 4, radius: 10),
+                bg: c(132, 222, 206), key: c(236, 252, 248), special: c(90, 200, 186),
+                pressKey: c(212, 240, 234), pressSpecial: c(74, 184, 170),
+                text: c(30, 96, 92), specialText: .white,
+                accent: c(44, 170, 190), depth: 5, radius: 10, short: "동글 민트", cap: "round"),
+        KBTheme(id: "peach", name: "투명 피치 젤리",
+                bg: c(255, 214, 204), key: c(255, 176, 160), special: c(255, 140, 130),
+                pressKey: c(250, 150, 134), pressSpecial: c(236, 116, 106),
+                text: c(150, 50, 46), specialText: .white,
+                accent: c(255, 110, 110), depth: 3, radius: 12, short: "투명 피치", cap: "clear"),
         KBTheme(id: "lime", name: "라임 젤리",
                 bg: c(214, 236, 190), key: c(249, 252, 241), special: c(176, 220, 110),
                 pressKey: c(232, 242, 218), pressSpecial: c(156, 204, 90),
                 text: c(60, 90, 40), specialText: c(40, 70, 24),
                 side: c(196, 214, 168), sideSpecial: c(116, 166, 56), accent: c(110, 172, 52),
                 depth: 4, radius: 10),
-        KBTheme(id: "lavender", name: "라벤더 젤리",
-                bg: c(222, 212, 246), key: c(252, 248, 255), special: c(184, 160, 240),
-                pressKey: c(238, 230, 252), pressSpecial: c(168, 142, 228),
-                text: c(96, 72, 156), specialText: .white,
-                side: c(204, 190, 236), sideSpecial: c(128, 100, 204), accent: c(150, 112, 232),
-                depth: 4, radius: 10),
+        KBTheme(id: "lavender", name: "라벤더 클레이",
+                bg: c(232, 224, 248), key: c(242, 235, 253), special: c(198, 180, 240),
+                pressKey: c(226, 216, 246), pressSpecial: c(180, 160, 230),
+                text: c(100, 80, 150), specialText: .white,
+                accent: c(160, 130, 232), depth: 0, radius: 12, short: "라벤더 클레이", cap: "clay"),
         KBTheme(id: "coral", name: "가을 코랄",
                 bg: c(250, 160, 130), key: c(255, 251, 247), special: c(238, 104, 80),
                 pressKey: c(255, 234, 224), pressSpecial: c(214, 88, 66),

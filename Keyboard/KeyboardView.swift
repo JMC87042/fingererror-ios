@@ -12,6 +12,10 @@ final class KeyCap: UIView {
     private let grad = CAGradientLayer()
     /// 젤리 반짝임 (위에서 아래로 사라짐)
     private let glossGrad = CAGradientLayer()
+    /// 동글 타자기 안쪽 테두리
+    private let ring = CAShapeLayer()
+    /// 투명 젤리 물방울 반사광
+    private let drop = UIView()
     /// 계절 스티커 (키 모서리에 살짝 걸침, 누르는 영역과 무관)
     let sticker = UIImageView()
     var stickerPos: CGPoint? = nil { didSet { setNeedsLayout() } }
@@ -39,6 +43,13 @@ final class KeyCap: UIView {
         grad.startPoint = CGPoint(x: 0.5, y: 0)
         grad.endPoint = CGPoint(x: 0.5, y: 1)
         face.layer.insertSublayer(grad, at: 0)
+        ring.fillColor = UIColor.clear.cgColor
+        ring.lineWidth = 1
+        face.layer.insertSublayer(ring, above: grad)
+        drop.isUserInteractionEnabled = false
+        drop.backgroundColor = UIColor(white: 1, alpha: 0.75)
+        drop.isHidden = true
+        face.addSubview(drop)
         glossGrad.startPoint = CGPoint(x: 0.5, y: 0)
         glossGrad.endPoint = CGPoint(x: 0.5, y: 1)
         gloss.isUserInteractionEnabled = false
@@ -95,14 +106,30 @@ final class KeyCap: UIView {
             if isDown { f.origin.y += d * (theme.jelly ? 0.75 : 0.6) }
         }
         face.frame = f
-        face.layer.cornerRadius = theme.radius
-        layer.cornerRadius = theme.radius
+        // 동글 타자기는 키 칸 안에서 동그랗게(넓은 키는 알약)
+        let cr = theme.cap == "round" ? min(bounds.width, f.height) / 2 : theme.radius
+        face.layer.cornerRadius = cr
+        layer.cornerRadius = cr
         CATransaction.begin(); CATransaction.setDisableActions(true)
         grad.frame = face.bounds
-        grad.cornerRadius = theme.radius
+        grad.cornerRadius = cr
+        ring.frame = face.bounds
+        ring.path = theme.cap == "round" ? UIBezierPath(roundedRect: face.bounds.insetBy(dx: 2.5, dy: 2.5), cornerRadius: max(cr - 2.5, 0)).cgPath : nil
         CATransaction.commit()
         if theme.jelly {
-            layer.shadowPath = UIBezierPath(roundedRect: bounds.offsetBy(dx: 0, dy: 1.6).insetBy(dx: 0.5, dy: 0), cornerRadius: theme.radius).cgPath
+            let sp: CGRect
+            switch theme.cap {
+            case "clay": sp = bounds.offsetBy(dx: 0, dy: isDown ? 1 : 3.5).insetBy(dx: -1, dy: 0)
+            case "round": sp = bounds.offsetBy(dx: 0, dy: 2).insetBy(dx: 1.5, dy: 0)
+            default: sp = bounds.offsetBy(dx: 0, dy: 1.6).insetBy(dx: 0.5, dy: 0)
+            }
+            layer.shadowPath = UIBezierPath(roundedRect: sp, cornerRadius: cr).cgPath
+        }
+        if theme.cap == "clear" {
+            let fb = face.bounds
+            let ow = min(fb.width * 0.28, 14), oh = fb.height * 0.13
+            drop.frame = CGRect(x: fb.width * 0.22 - ow / 2, y: fb.height * 0.2 - oh / 2, width: ow, height: oh)
+            drop.layer.cornerRadius = oh / 2
         }
         label.frame = face.bounds.insetBy(dx: 2, dy: 0)
         hint.frame = CGRect(x: 5, y: 2, width: 20, height: 13)
@@ -150,25 +177,65 @@ final class KeyCap: UIView {
         face.layer.shadowOffset = CGSize(width: 0, height: t.shadowColor == nil ? 1 : 2.5)
         gloss.isHidden = !(t.gloss || t.jelly) || isDown
         gloss.backgroundColor = t.jelly ? .clear : UIColor(white: 1, alpha: 0.35)
+        drop.isHidden = true
+        ring.isHidden = true
         if t.jelly {
-            // 3D 젤리: 아랫단은 윗면보다 진하게, 윗면은 위가 밝은 그라데이션, 바닥에 은은한 그림자
+            // 3D 키캡: 아랫단은 윗면보다 진하게, 윗면은 위가 밝은 그라데이션, 바닥에 은은한 그림자
             let top = (face.backgroundColor ?? t.key).resolvedColor(with: traitCollection)
             let fallbackSide = KeyCap.mix(top, .black, (isSpecial || isAccent) ? 0.22 : 0.16)
             backgroundColor = ((isSpecial || isAccent) ? (isAccent ? KeyCap.mix(top, .black, 0.22) : (t.sideSpecial ?? fallbackSide)) : (t.side ?? fallbackSide)).resolvedColor(with: traitCollection)
             CATransaction.begin(); CATransaction.setDisableActions(true)
             grad.isHidden = false
+            grad.type = .axial
+            grad.startPoint = CGPoint(x: 0.5, y: 0); grad.endPoint = CGPoint(x: 0.5, y: 1)
             var br: CGFloat = 0, bgc: CGFloat = 0, bb: CGFloat = 0, ba: CGFloat = 0
             t.bg.resolvedColor(with: traitCollection).getRed(&br, green: &bgc, blue: &bb, alpha: &ba)
             let ga: CGFloat = (br + bgc + bb) * 255 < 120 ? 0.16 : 0.6
             if glossGrad.superlayer == nil { gloss.layer.addSublayer(glossGrad) }
             glossGrad.colors = [UIColor(white: 1, alpha: ga).cgColor, UIColor(white: 1, alpha: 0).cgColor]
             grad.colors = [KeyCap.mix(top, .white, isDown ? 0.10 : 0.42).cgColor, top.cgColor]
-            CATransaction.commit()
             face.layer.shadowOpacity = 0
             layer.shadowColor = KeyCap.mix(backgroundColor ?? .black, .black, 0.66).cgColor
             layer.shadowOpacity = 0.4
             layer.shadowRadius = 1.2
             layer.shadowOffset = .zero
+            switch t.cap {
+            case "round":
+                // 동글 타자기: 둥근 빛 + 안쪽 테두리, 반짝임 띠 없음
+                backgroundColor = KeyCap.mix(top, .black, (isSpecial || isAccent) ? 0.26 : 0.18)
+                grad.type = .radial
+                grad.startPoint = CGPoint(x: 0.4, y: 0.35); grad.endPoint = CGPoint(x: 1.05, y: 1.05)
+                grad.colors = [KeyCap.mix(top, .white, isDown ? 0.15 : 0.5).cgColor, top.cgColor]
+                ring.isHidden = false
+                ring.strokeColor = KeyCap.mix(top, .black, 0.12).withAlphaComponent(0.6).cgColor
+                gloss.isHidden = true
+                layer.shadowColor = UIColor.black.cgColor
+                layer.shadowOpacity = 0.18
+                layer.shadowRadius = 1
+            case "clear":
+                // 투명 젤리: 속이 비치는 윗면 + 흰 테두리 + 물방울 반사광
+                face.backgroundColor = top.withAlphaComponent(isDown ? 0.75 : 0.55)
+                backgroundColor = top.withAlphaComponent(0.35)
+                grad.colors = [KeyCap.mix(top, .white, 0.55).withAlphaComponent(isDown ? 0.86 : 0.75).cgColor, top.withAlphaComponent(0.0).cgColor]
+                face.layer.borderWidth = 1.3
+                face.layer.borderColor = UIColor(white: 1, alpha: 0.85).cgColor
+                gloss.isHidden = true
+                drop.isHidden = isDown
+                layer.shadowOpacity = 0
+            case "clay":
+                // 클레이: 무광 점토. 퍼진 그림자, 누르면 그림자가 줄어듦
+                backgroundColor = .clear
+                grad.colors = [KeyCap.mix(top, .white, isDown ? 0.05 : 0.28).cgColor, KeyCap.mix(top, .black, 0.05).cgColor]
+                face.layer.borderWidth = 1.5
+                face.layer.borderColor = UIColor(white: 1, alpha: isDown ? 0.16 : 0.43).cgColor
+                gloss.isHidden = true
+                layer.shadowColor = KeyCap.mix(top, .black, 0.45).cgColor
+                layer.shadowOpacity = isDown ? 0.3 : 0.38
+                layer.shadowRadius = isDown ? 1.5 : 3.5
+            default: break
+            }
+            CATransaction.commit()
+            setNeedsLayout()
         } else {
             grad.isHidden = true
             layer.shadowOpacity = 0
