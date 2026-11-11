@@ -94,11 +94,11 @@ struct KBTheme {
                 pressKey: c(232, 242, 252), pressSpecial: c(100, 164, 232),
                 text: c(60, 110, 170), specialText: .white,
                 accent: c(255, 128, 170), depth: 4, radius: 10),
-        KBTheme(id: "cocoa", name: "코코아",
-                bg: c(232, 214, 196), key: c(255, 249, 240), special: c(176, 128, 96),
-                pressKey: c(244, 234, 220), pressSpecial: c(156, 110, 80),
-                text: c(110, 72, 50), specialText: .white,
-                accent: c(150, 96, 64), depth: 4, radius: 10),
+        KBTheme(id: "pin", name: "핀스트라이프",
+                bg: c(250, 250, 251), key: .white, special: c(30, 30, 34),
+                pressKey: c(236, 236, 238), pressSpecial: c(54, 54, 58),
+                text: c(24, 24, 28), specialText: .white,
+                accent: c(204, 24, 44), depth: 4, radius: 10, bgImage: "bg_pin"),
 
         // ---- 레트로 10색 (키캡 모양 고르기) ----
         KBTheme(id: "rt_rose", name: "블랙 & 로즈 골드",
