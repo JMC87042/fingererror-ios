@@ -45,15 +45,15 @@ struct KBTheme {
         bg: c(40, 30, 80), key: c(36, 32, 56), special: c(112, 82, 204),
         pressKey: c(56, 50, 84), pressSpecial: c(96, 68, 184),
         text: c(226, 218, 255), specialText: .white,
-        accent: c(214, 172, 76), depth: 4, radius: 10, bgImage: "bg_kit")
+        accent: c(196, 152, 64), depth: 4, radius: 10, bgImage: "bg_kit")
 
     static let all: [KBTheme] = [
         standard,
-        KBTheme(id: "oled", name: "블랙",
-                bg: .black, key: c(40, 40, 46), special: c(26, 26, 30),
-                pressKey: c(62, 62, 68), pressSpecial: c(46, 46, 52),
-                text: c(226, 226, 222), specialText: c(160, 160, 156),
-                side: c(18, 18, 22), sideSpecial: c(10, 10, 12), depth: 4, radius: 10),
+        KBTheme(id: "redblue", name: "레드 블루",
+                bg: c(30, 40, 110), key: c(250, 248, 244), special: c(170, 20, 72),
+                pressKey: c(232, 228, 222), pressSpecial: c(150, 14, 60),
+                text: c(0, 62, 146), specialText: .white,
+                accent: c(200, 156, 60), depth: 4, radius: 10, bgImage: "bg_stripe"),
         KBTheme(id: "mint", name: "민트 소다",
                 bg: c(132, 222, 206), key: c(236, 252, 248), special: c(90, 200, 186),
                 pressKey: c(212, 240, 234), pressSpecial: c(74, 184, 170),
