@@ -57,6 +57,7 @@ struct ContentView: View {
                                     .resizable()
                                     .scaledToFit()
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .shadow(color: .black.opacity(0.12), radius: 0, x: 0, y: 4)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 10)
                                             .stroke(themeId == t.id ? Color.green : Color.clear, lineWidth: 3)
@@ -81,9 +82,13 @@ struct ContentView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                Text("버전 2026.11.10-2 (타자 중 커서 떨림 수정) · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
+                Text("버전 2026.11.11 (3D 젤리 디자인) · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
             }
             .navigationTitle("핑거에러")
+            // 3D 젤리: 크림 배경 + 복숭아 포인트
+            .scrollContentBackground(.hidden)
+            .background(Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 0.08, alpha: 1) : UIColor(red: 250/255, green: 242/255, blue: 234/255, alpha: 1) }))
+            .tint(Color(red: 1, green: 0.54, blue: 0.42))
         }
     }
 }

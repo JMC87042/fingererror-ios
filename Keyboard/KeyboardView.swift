@@ -8,6 +8,10 @@ final class KeyCap: UIView {
     let hint = UILabel()
     let icon = UIImageView()
     let gloss = UIView()
+    /// 젤리 윗면 그라데이션 (위가 밝게)
+    private let grad = CAGradientLayer()
+    /// 젤리 반짝임 (위에서 아래로 사라짐)
+    private let glossGrad = CAGradientLayer()
     /// 계절 스티커 (키 모서리에 살짝 걸침, 누르는 영역과 무관)
     let sticker = UIImageView()
     var stickerPos: CGPoint? = nil { didSet { setNeedsLayout() } }
@@ -32,6 +36,11 @@ final class KeyCap: UIView {
         face.layer.shadowOffset = CGSize(width: 0, height: 1)
         face.layer.shadowRadius = 0
         addSubview(face)
+        grad.startPoint = CGPoint(x: 0.5, y: 0)
+        grad.endPoint = CGPoint(x: 0.5, y: 1)
+        face.layer.insertSublayer(grad, at: 0)
+        glossGrad.startPoint = CGPoint(x: 0.5, y: 0)
+        glossGrad.endPoint = CGPoint(x: 0.5, y: 1)
         gloss.isUserInteractionEnabled = false
         gloss.backgroundColor = UIColor(white: 1, alpha: 0.35)
         gloss.isHidden = true
@@ -58,11 +67,24 @@ final class KeyCap: UIView {
 
     static let patPad: CGFloat = 8
 
+    static func mix(_ a: UIColor, _ b: UIColor, _ f: CGFloat) -> UIColor {
+        var r1: CGFloat = 0, g1: CGFloat = 0, b1: CGFloat = 0, a1: CGFloat = 0
+        var r2: CGFloat = 0, g2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
+        a.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
+        b.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+        return UIColor(red: r1 + (r2 - r1) * f, green: g1 + (g2 - g1) * f, blue: b1 + (b2 - b1) * f, alpha: 1)
+    }
+
     static func image(_ name: String) -> UIImage? {
         UIImage(named: name, in: Bundle(for: KeyCap.self), compatibleWith: nil)
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func traitCollectionDidChange(_ previous: UITraitCollection?) {
+        super.traitCollectionDidChange(previous)
+        refreshColor()
+    }
 
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -70,18 +92,31 @@ final class KeyCap: UIView {
         let d = theme.depth
         if d > 0 {
             f.size.height -= d
-            if isDown { f.origin.y += d * 0.6 }
+            if isDown { f.origin.y += d * (theme.jelly ? 0.75 : 0.6) }
         }
         face.frame = f
         face.layer.cornerRadius = theme.radius
         layer.cornerRadius = theme.radius
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        grad.frame = face.bounds
+        grad.cornerRadius = theme.radius
+        CATransaction.commit()
+        if theme.jelly {
+            layer.shadowPath = UIBezierPath(roundedRect: bounds.offsetBy(dx: 0, dy: 1.6).insetBy(dx: 0.5, dy: 0), cornerRadius: theme.radius).cgPath
+        }
         label.frame = face.bounds.insetBy(dx: 2, dy: 0)
         hint.frame = CGRect(x: 5, y: 2, width: 20, height: 13)
         let s = face.bounds.height * iconScale
         let ix = iconRight ? face.bounds.maxX - KeyCap.patPad - s : face.bounds.midX - s / 2
         icon.frame = CGRect(x: ix, y: face.bounds.midY - s / 2, width: s, height: s)
         let fb = face.bounds
-        gloss.frame = CGRect(x: fb.width * 0.12, y: fb.height * 0.08, width: fb.width * 0.76, height: fb.height * 0.22)
+        gloss.frame = theme.jelly
+            ? CGRect(x: fb.width * 0.12, y: fb.height * 0.06, width: fb.width * 0.76, height: fb.height * 0.28)
+            : CGRect(x: fb.width * 0.12, y: fb.height * 0.08, width: fb.width * 0.76, height: fb.height * 0.22)
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        glossGrad.frame = gloss.bounds
+        glossGrad.cornerRadius = min(theme.radius * 0.6, gloss.bounds.height / 2)
+        CATransaction.commit()
         gloss.layer.cornerRadius = min(theme.radius * 0.7, gloss.frame.height / 2)
         if let p = stickerPos {
             let ss: CGFloat = 15
@@ -113,7 +148,31 @@ final class KeyCap: UIView {
         face.layer.shadowColor = (t.shadowColor ?? .black).cgColor
         face.layer.shadowRadius = t.shadowColor == nil ? 0 : 2.5
         face.layer.shadowOffset = CGSize(width: 0, height: t.shadowColor == nil ? 1 : 2.5)
-        gloss.isHidden = !t.gloss || isDown
+        gloss.isHidden = !(t.gloss || t.jelly) || isDown
+        gloss.backgroundColor = t.jelly ? .clear : UIColor(white: 1, alpha: 0.35)
+        if t.jelly {
+            // 3D 젤리: 아랫단은 윗면보다 진하게, 윗면은 위가 밝은 그라데이션, 바닥에 은은한 그림자
+            let top = (face.backgroundColor ?? t.key).resolvedColor(with: traitCollection)
+            let fallbackSide = KeyCap.mix(top, .black, (isSpecial || isAccent) ? 0.22 : 0.16)
+            backgroundColor = ((isSpecial || isAccent) ? (isAccent ? KeyCap.mix(top, .black, 0.22) : (t.sideSpecial ?? fallbackSide)) : (t.side ?? fallbackSide)).resolvedColor(with: traitCollection)
+            CATransaction.begin(); CATransaction.setDisableActions(true)
+            grad.isHidden = false
+            var br: CGFloat = 0, bgc: CGFloat = 0, bb: CGFloat = 0, ba: CGFloat = 0
+            t.bg.resolvedColor(with: traitCollection).getRed(&br, green: &bgc, blue: &bb, alpha: &ba)
+            let ga: CGFloat = (br + bgc + bb) * 255 < 120 ? 0.16 : 0.6
+            if glossGrad.superlayer == nil { gloss.layer.addSublayer(glossGrad) }
+            glossGrad.colors = [UIColor(white: 1, alpha: ga).cgColor, UIColor(white: 1, alpha: 0).cgColor]
+            grad.colors = [KeyCap.mix(top, .white, isDown ? 0.10 : 0.42).cgColor, top.cgColor]
+            CATransaction.commit()
+            face.layer.shadowOpacity = 0
+            layer.shadowColor = KeyCap.mix(backgroundColor ?? .black, .black, 0.66).cgColor
+            layer.shadowOpacity = 0.4
+            layer.shadowRadius = 1.2
+            layer.shadowOffset = .zero
+        } else {
+            grad.isHidden = true
+            layer.shadowOpacity = 0
+        }
         label.textColor = isAccent ? UIColor(white: 1, alpha: 0.98) : (isSpecial ? t.specialText : t.text)
         hint.textColor = label.textColor.withAlphaComponent(0.6)
     }
