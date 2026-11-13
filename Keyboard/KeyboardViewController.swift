@@ -65,17 +65,94 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         kv.learner = learner
         kv.delegate = self
         view.addSubview(kv)
+        // 맨 위 예측 단어 줄 (키 크기·위치는 그대로, 줄만 위에 하나 더)
+        bar.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(bar)
+        bar.onPick = { [weak self] w in self?.pickSuggestion(w) }
+        bar.onForget = { [weak self] w in
+            self?.predictor.forget(w)
+            self?.kv.showToast("‘\(w)’ 지웠어요", "이 단어는 다시 추천 안 할게요")
+            self?.updateSuggestions()
+        }
+        kv.onTheme = { [weak self] t in self?.bar.setTheme(t) }
         let h = kv.heightAnchor.constraint(equalToConstant: 236)
         h.priority = UILayoutPriority(999)
         kbHeight = h
+        let bh = bar.heightAnchor.constraint(equalToConstant: SuggestBar.height)
+        barHeight = bh
         kv.onReport = { [weak self] in self?.showReport() }
         NSLayoutConstraint.activate([
+            bar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            bar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            bar.topAnchor.constraint(equalTo: view.topAnchor),
+            bh,
             kv.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             kv.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            kv.topAnchor.constraint(equalTo: view.topAnchor),
+            kv.topAnchor.constraint(equalTo: bar.bottomAnchor),
             kv.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             h
         ])
+    }
+
+    // MARK: - 예측 단어 (키보드 위 후보 3칸)
+
+    private let bar = SuggestBar()
+    private var barHeight: NSLayoutConstraint?
+    private let predictor = Predictor()
+    private var noPredict = false
+
+    private func isWordCh(_ c: Character) -> Bool {
+        c.isLetter || c.isNumber || c.unicodeScalars.contains { $0.value >= 0x3131 && $0.value <= 0x318E }
+    }
+
+    /// 글에서 (앞 단어, 쓰는 중인 단어)
+    private func splitWords(_ s: String) -> (String?, String) {
+        let t = Array(s.suffix(60))
+        var i = t.count
+        while i > 0 && isWordCh(t[i - 1]) { i -= 1 }
+        let cur = String(t[i...])
+        var j = i
+        while j > 0 && t[j - 1] == " " { j -= 1 }
+        if j > 0 && !isWordCh(t[j - 1]) { return (nil, cur) }   // 문장 끝(. , 줄바꿈) 뒤면 앞 단어 없음
+        var k = j
+        while k > 0 && isWordCh(t[k - 1]) { k -= 1 }
+        let prev = String(t[k..<j])
+        return ((prev.isEmpty || j == i) ? nil : prev, cur)
+    }
+
+    private func updateSuggestions() {
+        if noPredict { bar.setWords([]); return }
+        let (prev, cur) = splitWords(textDocumentProxy.documentContextBeforeInput ?? "")
+        bar.setWords(predictor.suggest(prev, cur))
+    }
+
+    /// 스페이스·엔터·마침표로 단어를 끝낼 때 배우기 (자동 교정된 뒤의 단어를 배움)
+    private func learnFinishedWord() {
+        guard !noPredict, let t = textDocumentProxy.documentContextBeforeInput, let last = t.last, !isWordCh(last) else { return }
+        let (prev, cur) = splitWords(String(t.dropLast()))
+        if !cur.isEmpty { predictor.learn(prev, cur) }
+    }
+
+    private func pickSuggestion(_ word: String) {
+        endWordCheck()
+        commitComposition()
+        let (prev, cur) = splitWords(textDocumentProxy.documentContextBeforeInput ?? "")
+        for _ in 0..<cur.count { textDocumentProxy.deleteBackward() }
+        textDocumentProxy.insertText(word + " ")
+        lastEditAt = Date()
+        lastAuto = nil
+        history.removeAll()
+        clearDel()
+        predictor.learn(prev, word)
+        updateSuggestions()
+    }
+
+    private func checkPredictField() {
+        let secure = textDocumentProxy.isSecureTextEntry ?? false
+        let kt = textDocumentProxy.keyboardType ?? .default
+        noPredict = secure || [.emailAddress, .URL, .webSearch, .numberPad, .phonePad, .decimalPad, .asciiCapableNumberPad, .numbersAndPunctuation].contains(kt)
+        bar.isHidden = noPredict
+        barHeight?.constant = noPredict ? 0 : SuggestBar.height
     }
 
     // MARK: - 키보드 안 리포트 (아이폰은 키보드 기록을 앱이 못 읽을 수 있어서 키보드에서 바로 보여줌)
@@ -116,6 +193,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private func resetFromKeyboard() {
         ThemeStore.requestReset()
         learner.reset()
+        predictor.clear()
         UserDefaults.standard.set(ThemeStore.resetStamp(), forKey: "fe.resetDone")
         history.removeAll()
         clearDel()
@@ -136,11 +214,15 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         kv.applyTheme(ThemeStore.current())   // 앱에서 고른 테마
+        bar.setTheme(kv.theme)
+        checkPredictField()
+        updateSuggestions()
         autoCap()
         // 앱에서 '데이터 초기화'를 눌렀으면 여기서 엄지 기록을 처음부터
         let rs = ThemeStore.resetStamp()
         if rs > UserDefaults.standard.double(forKey: "fe.resetDone") {
             learner.reset()
+            predictor.clear()
             UserDefaults.standard.set(rs, forKey: "fe.resetDone")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
                 self?.kv.showToast("기록을 비웠어요", "팻핑이가 처음부터 다시 배울게요")
@@ -201,11 +283,18 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         closeReport()
         commitComposition()
         learner.saveNow()
+        predictor.save()
     }
 
     // MARK: - 키 입력
 
     func keyPressed(_ id: String, at p: CGPoint, raw: String) {
+        handleKey(id, at: p, raw: raw)
+        if ["SPACE", "RETURN", ".", ",", "?", "!"].contains(id) { learnFinishedWord() }
+        updateSuggestions()
+    }
+
+    private func handleKey(_ id: String, at p: CGPoint, raw: String) {
         switch id {
         case "SHIFT":
             if kv.page == .english {
@@ -265,6 +354,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         lastAuto = nil
         textDocumentProxy.adjustTextPosition(byCharacterOffset: by)
         lastEditAt = Date()
+        updateSuggestions()
     }
 
     /// 트랙패드에서 위아래 줄 이동: 앞뒤 글을 보고 윗줄·아랫줄의 같은 칸으로
@@ -550,11 +640,14 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
         checkExternalChange()
+        checkPredictField()
+        updateSuggestions()
     }
 
     override func selectionDidChange(_ textInput: UITextInput?) {
         super.selectionDidChange(textInput)
         checkExternalChange()
+        updateSuggestions()
     }
 
     // MARK: - 학습

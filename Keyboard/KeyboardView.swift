@@ -430,8 +430,12 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
     private let bgView = UIImageView()
 
+    /// 테마가 바뀌면 (예측 단어 줄도 같은 색으로)
+    var onTheme: ((KBTheme) -> Void)?
+
     func applyTheme(_ t: KBTheme) {
         theme = t
+        onTheme?(t)
         backgroundColor = t.bg
         bgView.image = t.bgImage.flatMap { KeyCap.image($0) }
         bgView.isHidden = bgView.image == nil
