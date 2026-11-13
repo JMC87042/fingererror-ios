@@ -11,6 +11,7 @@ struct FingerErrorApp: App {
 struct ContentView: View {
     @State private var text = ""
     @State private var themeId = ThemeStore.currentId()
+    @State private var predictOn = ThemeStore.bool("fe.predict")
     @State private var capId = KBTheme.caps.contains { $0.id == ThemeStore.capId() } ? ThemeStore.capId() : "jelly"
 
     var body: some View {
@@ -39,6 +40,14 @@ struct ContentView: View {
                             UIApplication.shared.open(url)
                         }
                     }
+                }
+                Section {
+                    Toggle("예측 단어 (키보드 위 후보 3칸)", isOn: $predictOn)
+                        .onChange(of: predictOn) { v in ThemeStore.setBool("fe.predict", v) }
+                } header: {
+                    Text("자동 단어").font(.custom(ThemeFont.name, size: 15))
+                } footer: {
+                    Text("켜면 치는 중인 단어와 다음에 올 말을 추천해요. 후보를 꾹 누르면 지워져요. 기록은 이 폰 안에만 저장돼요.")
                 }
                 Section {
                     Picker("키캡 모양", selection: $capId) {
@@ -96,7 +105,7 @@ struct ContentView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                Text("버전 2026.11.13 (예측 단어) · 트랙패드 커서 · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
+                Text("버전 2026.11.13 (예측 단어 켜고 끄기) · 트랙패드 커서 · 100개마다 리포트 · 한/A 영어 · 테마별 팻핑이 · 기념일").font(.caption2).foregroundStyle(.secondary).padding(4)
             }
             .navigationTitle("핑거에러")
             // 3D 젤리: 크림 배경 + 복숭아 포인트

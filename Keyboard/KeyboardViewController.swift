@@ -150,7 +150,7 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
     private func checkPredictField() {
         let secure = textDocumentProxy.isSecureTextEntry ?? false
         let kt = textDocumentProxy.keyboardType ?? .default
-        noPredict = secure || [.emailAddress, .URL, .webSearch, .numberPad, .phonePad, .decimalPad, .asciiCapableNumberPad, .numbersAndPunctuation].contains(kt)
+        noPredict = !ThemeStore.bool("fe.predict") || secure || [.emailAddress, .URL, .webSearch, .numberPad, .phonePad, .decimalPad, .asciiCapableNumberPad, .numbersAndPunctuation].contains(kt)
         bar.isHidden = noPredict
         barHeight?.constant = noPredict ? 0 : SuggestBar.height
     }
