@@ -433,8 +433,12 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     /// 테마가 바뀌면 (예측 단어 줄도 같은 색으로)
     var onTheme: ((KBTheme) -> Void)?
 
+    /// 키보드 전체 밀기로 커서 (삼성 '커서 제어'처럼, 앱에서 켬 · 처음엔 꺼짐)
+    private var swipeAll = false
+
     func applyTheme(_ t: KBTheme) {
         theme = t
+        swipeAll = ThemeStore.bool("fe.swipeCursor")
         onTheme?(t)
         backgroundColor = t.bg
         bgView.image = t.bgImage.flatMap { KeyCap.image($0) }
@@ -751,6 +755,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private var cursorDir = 0                  // 마지막으로 움직인 방향 (-1 왼쪽, 1 오른쪽)
     private var cursorLastY: CGFloat = 0       // 위아래 줄 이동 (트랙패드)
     private var cursorFY: CGFloat = 0
+    private var cursorWide = false             // 스페이스가 아닌 글자 키에서 시작 (키보드 전체 밀기)
+    private var cursorStart: CGPoint = .zero
 
     /// 트랙패드 모드: 아이폰 기본 키보드처럼 글자·그림을 지워 빈 판으로
     private func setTrackpad(_ on: Bool) {
@@ -790,6 +796,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         cursorOn = true
         cancelHold()
         if let pd = pressed.removeValue(forKey: oid), pd.index < keys.count { keys[pd.index].cap.isDown = false }
+        if let pop = popups.removeValue(forKey: oid) { pop.removeFromSuperview() }
         cursorLastY = cursorFY
         setTrackpad(true)
         tapHaptic.impactOccurred(intensity: 1.0)
@@ -807,9 +814,17 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
                 tapHaptic.impactOccurred(intensity: 0.4)
             }
         }
-        if !cursorOn {
+        if !cursorOn && cursorWide {
+            // 글자 키에서 시작: 엄지가 살짝 미끄러진 건 오타 학습용 그대로 두고,
+            // 키 1개 반쯤 확실히 옆으로 밀어야 커서 모드 (위아래로 움직이면 포기)
+            let dx = abs(p.x - cursorStart.x), dy = abs(p.y - cursorStart.y)
+            if dy > 22 && dy > dx { endCursor(); return }
+            if dx < 48 || dx < dy * 2 { return }
+        } else if !cursorOn {
             // 글자 치다가 스페이스를 살짝 스친 건 커서 이동이 아님 (확실히 옆으로 밀어야 시작)
             if abs(p.x - cursorLastX) < 28 { return }
+        }
+        if !cursorOn {
             cursorArmed()
             cursorLastX = p.x; cursorFX = p.x; cursorPX = p.x
             cursorLastY = p.y; cursorFY = p.y
@@ -843,6 +858,7 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         let wasOn = cursorOn
         cursorTouch = nil
         cursorOn = false
+        cursorWide = false
         if wasOn { setTrackpad(false) }
     }
 
@@ -918,6 +934,13 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
                 let pop = KeyPopup()
                 pop.show(key: keys[i].frame, text: txt, theme: theme, in: self)
                 popups[ObjectIdentifier(t)] = pop
+            }
+            // 키보드 전체 밀기 켰을 때: 글자 키에서 옆으로 길게 밀어도 커서 이동
+            if swipeAll, id != "SPACE", keys[i].cap.pops, cursorTouch == nil {
+                startCursorArm(t, at: p)
+                NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(cursorArmed), object: nil)   // 꾹 누르기로는 시작 안 함
+                cursorWide = true
+                cursorStart = p
             }
             if id == "SPACE" {
                 // 팻핑이 그림을 꾹 = 메뉴, 그 밖을 꾹 = 커서 이동 (어디서든 좌우로 밀면 커서 이동)
