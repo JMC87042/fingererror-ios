@@ -395,6 +395,8 @@ protocol KeyboardViewDelegate: AnyObject {
     func keyReleased(_ id: String)
     /// 스페이스바를 꾹 누르거나 밀어서 커서 이동 (음수 = 왼쪽)
     func moveCursor(_ by: Int)
+    /// 트랙패드 모드에서 위아래 줄 이동 (음수 = 위)
+    func moveCursorLine(_ by: Int)
 }
 
 final class KeyboardView: UIView, UIInputViewAudioFeedback {
@@ -743,6 +745,19 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
     private var cursorPX: CGFloat = 0
     private var cursorFX: CGFloat = 0          // 손가락 위치를 부드럽게 (떨림 거르기)
     private var cursorDir = 0                  // 마지막으로 움직인 방향 (-1 왼쪽, 1 오른쪽)
+    private var cursorLastY: CGFloat = 0       // 위아래 줄 이동 (트랙패드)
+    private var cursorFY: CGFloat = 0
+
+    /// 트랙패드 모드: 아이폰 기본 키보드처럼 글자·그림을 지워 빈 판으로
+    private func setTrackpad(_ on: Bool) {
+        UIView.animate(withDuration: 0.15) {
+            for k in self.keys {
+                k.cap.label.alpha = on ? 0 : 1
+                k.cap.hint.alpha = on ? 0 : 1
+                k.cap.icon.alpha = on ? 0 : 1
+            }
+        }
+    }
 
 
     /// 스페이스바 오른쪽 구석 팻핑이 자리 (여기를 꾹 누르면 테마·한손 모드 메뉴)
@@ -756,6 +771,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         cursorOn = false
         cursorLastX = p.x
         cursorFX = p.x
+        cursorLastY = p.y
+        cursorFY = p.y
         cursorDir = 0
         cursorPX = p.x
         cursorT = Date().timeIntervalSince1970
@@ -769,15 +786,29 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
         cursorOn = true
         cancelHold()
         if let pd = pressed.removeValue(forKey: oid), pd.index < keys.count { keys[pd.index].cap.isDown = false }
+        cursorLastY = cursorFY
+        setTrackpad(true)
         tapHaptic.impactOccurred(intensity: 1.0)
     }
 
     private func cursorMoved(_ p: CGPoint) {
+        if cursorOn {
+            // 위아래: 손가락을 한 줄 높이쯤 올리고 내리면 윗줄·아랫줄로 (아이폰 트랙패드처럼)
+            cursorFY = cursorFY * 0.3 + p.y * 0.7
+            let lineStep: CGFloat = 26
+            let ln = Int((cursorFY - cursorLastY) / lineStep)
+            if ln != 0 {
+                cursorLastY += CGFloat(ln) * lineStep
+                delegate?.moveCursorLine(ln)
+                tapHaptic.impactOccurred(intensity: 0.4)
+            }
+        }
         if !cursorOn {
             // 글자 치다가 스페이스를 살짝 스친 건 커서 이동이 아님 (확실히 옆으로 밀어야 시작)
             if abs(p.x - cursorLastX) < 28 { return }
             cursorArmed()
             cursorLastX = p.x; cursorFX = p.x; cursorPX = p.x
+            cursorLastY = p.y; cursorFY = p.y
             cursorT = Date().timeIntervalSince1970
             return
         }
@@ -805,8 +836,10 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
 
     private func endCursor() {
         NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(cursorArmed), object: nil)
+        let wasOn = cursorOn
         cursorTouch = nil
         cursorOn = false
+        if wasOn { setTrackpad(false) }
     }
 
     @objc private func openMenuFromHold() {
@@ -859,6 +892,8 @@ final class KeyboardView: UIView, UIInputViewAudioFeedback {
                 }
                 continue
             }
+            // 트랙패드 중 다른 손가락은 글자 입력 안 함
+            if cursorOn { continue }
             guard let r = pick(p) else { continue }
             let i = r.0
             let id = keys[i].id

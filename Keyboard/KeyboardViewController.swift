@@ -267,6 +267,40 @@ final class KeyboardViewController: UIInputViewController, KeyboardViewDelegate 
         lastEditAt = Date()
     }
 
+    /// 트랙패드에서 위아래 줄 이동: 앞뒤 글을 보고 윗줄·아랫줄의 같은 칸으로
+    func moveCursorLine(_ by: Int) {
+        commitComposition()
+        history.removeAll()
+        clearDel()
+        lastAuto = nil
+        for _ in 0..<abs(by) {
+            let before = Array((textDocumentProxy.documentContextBeforeInput ?? "").utf16)
+            let after = Array((textDocumentProxy.documentContextAfterInput ?? "").utf16)
+            let nl: UInt16 = 10
+            let lineStart = (before.lastIndex(of: nl) ?? -1) + 1
+            let col = before.count - lineStart
+            var off = 0
+            if by < 0 {
+                if lineStart == 0 { off = -col }   // 맨 윗줄이면 줄 맨 앞으로
+                else {
+                    let prevEnd = lineStart - 1
+                    let prevStart = (before[..<prevEnd].lastIndex(of: nl) ?? -1) + 1
+                    let prevLen = prevEnd - prevStart
+                    off = -(col + 1 + max(prevLen - col, 0))
+                }
+            } else {
+                if let nlIdx = after.firstIndex(of: nl) {
+                    let rest = after[(nlIdx + 1)...]
+                    let nextLen = rest.firstIndex(of: nl).map { $0 - (nlIdx + 1) } ?? rest.count
+                    off = nlIdx + 1 + min(col, nextLen)
+                } else { off = after.count }   // 맨 아랫줄이면 줄 맨 끝으로
+            }
+            if off == 0 { break }
+            textDocumentProxy.adjustTextPosition(byCharacterOffset: off)
+        }
+        lastEditAt = Date()
+    }
+
     func keyReleased(_ id: String) {
         if id == "BACK" { stopRepeat() }
     }
